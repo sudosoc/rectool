@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rectool — recon workbench</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span class="name">rectool</span><span class="sub">recon workbench</span><small id="ver"></small>
+  </div>
+  <div class="top-right">
+    <span id="conn" class="led ok" title="Connection to the local rectool server"></span>
+    <span class="note">Authorised, lawful investigations only · results are leads, verify before acting</span>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ============================================================ CASE PANEL -->
+  <aside class="side">
+    <form id="form" autocomplete="off">
+      <section class="panel">
+        <header class="panel-h"><h2>1 · What do you know?</h2><span class="hint-line">One clue is enough — fill only what you have.</span></header>
+        <div id="fields"></div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-h"><h2>2 · Intensity</h2></header>
+        <div id="intensity" class="opts"></div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-h"><h2>3 · Collectors</h2><span class="hint-line">Hover <i class="i-demo">i</i> for what each does.</span></header>
+        <div id="modules" class="modules"></div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-h"><h2>4 · Options</h2></header>
+        <div id="options" class="opts"></div>
+        <details class="proxies">
+          <summary>Proxies <span class="muted">(optional)</span><span id="proxiesInfo"></span></summary>
+          <textarea name="proxies" rows="3" placeholder="socks5://127.0.0.1:9050&#10;http://user:pass@host:8080"></textarea>
+        </details>
+      </section>
+
+      <div id="formError" class="error" hidden></div>
+      <div class="actions-row">
+        <button id="startBtn" class="primary" type="submit">Start investigation</button>
+        <button id="clearBtn" class="ghost" type="button" title="Clear all fields">Clear</button>
+      </div>
+    </form>
+
+    <section class="panel">
+      <header class="panel-h"><h2>Cases</h2></header>
+      <ul id="history" class="history"></ul>
+    </section>
+  </aside>
+
+  <!-- ============================================================ WORKSPACE -->
+  <section class="main">
+    <div id="empty" class="panel welcome">
+      <h2>Start from any single clue</h2>
+      <p>A username, a nickname, a phone number, an e-mail, a domain, an IP, a wallet, a company name or a pasted profile link. rectool collects everything that clue exposes, then follows the strongest new leads it finds.</p>
+      <ol class="steps">
+        <li><b>Collect</b> — dozens of public sources in parallel.</li>
+        <li><b>Attribute</b> — profiles are scored so people who merely share a handle are not mixed in.</li>
+        <li><b>Pivot</b> — emails, domains, IPs and usernames found along the way are investigated in turn.</li>
+        <li><b>Map</b> — see everything as an overview, an intelligence tree and a relationship graph.</li>
+      </ol>
+    </div>
+
+    <div id="run" hidden>
+      <section class="panel casebar">
+        <div class="case-main">
+          <div class="case-title"><h2 id="caseTitle">Case</h2><span id="state" class="badge">running</span></div>
+          <div id="targetChips" class="chips"></div>
+        </div>
+        <div class="case-actions">
+          <button id="cancelBtn" class="danger" type="button">Stop</button>
+          <span id="exports" hidden>
+            <a class="btn" id="expJson" download title="Full machine-readable report with integrity digest">JSON</a>
+            <a class="btn" id="expCsv" download title="Spreadsheet-friendly list of findings">CSV</a>
+            <a class="btn" id="expTxt" download title="Human-readable report">TXT</a>
+          </span>
+        </div>
+        <div class="overall">
+          <div class="track big"><div id="overallFill" class="fill"></div></div>
+          <div id="overallText" class="muted"></div>
+        </div>
+        <details class="bars-wrap"><summary>Collector progress</summary><div id="bars" class="bars"></div></details>
+      </section>
+
+      <nav class="tabs" role="tablist" aria-label="Result views">
+        <button class="tab active" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+        <button class="tab" role="tab" data-tab="tree" aria-selected="false">Intelligence tree</button>
+        <button class="tab" role="tab" data-tab="graph" aria-selected="false">Relationship graph</button>
+        <button class="tab" role="tab" data-tab="photos" aria-selected="false">Photos <span id="photoCount" class="count">0</span></button>
+        <button class="tab" role="tab" data-tab="findings" aria-selected="false">Findings <span id="tabCount" class="count">0</span></button>
+        <button class="tab" role="tab" data-tab="coverage" aria-selected="false">Coverage &amp; integrity <span id="gapCount" class="count warn" hidden>0</span></button>
+      </nav>
+
+      <div id="tab-overview" class="tabpanel"></div>
+      <div id="tab-tree" class="tabpanel" hidden></div>
+      <div id="tab-graph" class="tabpanel" hidden>
+        <div class="graph-bar">
+          <div id="graphLegend" class="legend"></div>
+          <label class="check small"><input type="checkbox" id="graphWeak" checked> show weak leads</label>
+          <button class="ghost small" id="graphReset" type="button">Reset view</button>
+        </div>
+        <div class="graph-wrap"><canvas id="graph" aria-label="Relationship graph of discovered entities"></canvas><div id="graphTip" class="graph-tip" hidden></div></div>
+        <p class="hint-line">Edges show where a lead came from: the subject → what the first pass found → what following those leads found. Drag to pan, wheel to zoom, click a node for details.</p>
+      </div>
+      <div id="tab-photos" class="tabpanel" hidden></div>
+      <div id="tab-findings" class="tabpanel" hidden>
+        <div class="tablehead">
+          <div class="filters">
+            <input id="filter" type="search" placeholder="Filter findings…">
+            <select id="modFilter"><option value="">All collectors</option></select>
+            <select id="catFilter"><option value="">All categories</option></select>
+            <select id="confFilter"><option value="0">Any confidence</option><option value="0.5">≥ 50%</option><option value="0.7">≥ 70%</option><option value="0.9">≥ 90%</option></select>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Collector</th><th>Finding</th><th>Info</th><th>Conf.</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="tab-coverage" class="tabpanel" hidden></div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================================================ DETAIL DRAWER -->
+<aside id="drawer" class="drawer" hidden aria-label="Details">
+  <header><h3 id="drawerTitle">Details</h3><button id="drawerClose" class="ghost" type="button" aria-label="Close">✕</button></header>
+  <div id="drawerBody"></div>
+</aside>
+
+<script src="/hints.js"></script>
+<script src="/app.js"></script>
+<script src="/views.js"></script>
+<script src="/graph.js"></script>
+<script src="/boot.js"></script>
+</body>
+</html>

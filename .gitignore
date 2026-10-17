@@ -1,0 +1,9 @@
+bin/
+reports/
+out/
+*.exe
+*.test
+*.out
+data/wmn-data.json
+.idea/
+.vscode/
