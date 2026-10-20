@@ -18,7 +18,7 @@ var dateKeys = map[string]string{
 	"created": "account created", "joined": "joined", "member since": "member since", "first event": "first public activity seen",
 	"last event": "last public activity seen", "snapshot date": "archived copy", "first archived": "first archived copy",
 	"last archived": "latest archived copy", "registered": "registered", "registration": "registered", "last changed": "record last changed",
-	"expires": "expires", "updated": "profile updated", "created at": "created",
+	"first mention": "first press mention", "latest mention": "latest press mention", "expires": "expires", "updated": "profile updated", "created at": "created",
 }
 
 // timelineStage orders every dated fact (account creations, first and last

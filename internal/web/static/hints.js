@@ -119,6 +119,10 @@ RT.HINTS = {
     en: "Needs an e-mail. Looks the address up in the public XposedOrNot breach index and lists which leaks it appears in, the years and the kinds of data exposed (never the data itself). Useful to see how long an address has been in use and which services the person had accounts with.",
     ar: "محتاج إيميل. بيدوّر على الإيميل في فهرس XposedOrNot العام للتسريبات وبيعرض أي تسريبات ظهر فيها وسنواتها وأنواع البيانات المتسرّبة (مش البيانات نفسها). مفيد تعرف الإيميل شغال من إمتى وكان له حسابات على أنهي خدمات.",
   },
+  "mod:mentions": {
+    en: "Needs a full name. Searches the open GDELT news index for articles from roughly the last year whose headline names the person. Because a name is not an identity, each headline is checked against your company, place or e-mail domain: matches are marked with a tick, the rest stay unverified. It covers press mentions only, so many private people return nothing.",
+    ar: "محتاج اسم كامل. بيدوّر في فهرس GDELT المفتوح للأخبار عن مقالات آخر سنة تقريباً عنوانها فيه اسم الشخص. وعشان الاسم مش هوية، كل عنوان بيتقارن بالشركة أو المكان أو دومين الإيميل اللي دخلتهم: المطابق بيتعلّم بعلامة صح والباقي يفضل غير مؤكد. بيغطي الأخبار بس، فناس كتير عاديين مش هتطلع لهم نتايج.",
+  },
   "mod:devtrace": {
     en: "Needs a username or e-mail. Reads what developers leave in public without noticing: the names and e-mails in an account's recent public commits, the e-mails on its GPG keys (GitHub marks which are verified), public organisations, main languages and topics, npm / RubyGems maintainer details, and PGP keyserver identities for an e-mail. GitHub allows only 60 anonymous requests per hour.",
     ar: "محتاج يوزرنيم أو إيميل. بيقرأ اللي المطورين بيسيبوه علني من غير ما ياخدوا بالهم: أسماء وإيميلات الـcommits العامة الأخيرة، وإيميلات مفاتيح GPG (وGitHub بيعلّم المؤكد منها)، والمنظمات العامة واللغات والمواضيع، وبيانات مشرفي حزم npm وRubyGems، وهويات مفاتيح PGP على سيرفرات المفاتيح. GitHub بيسمح بـ60 طلب بس في الساعة من غير تسجيل.",

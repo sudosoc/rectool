@@ -23,6 +23,7 @@ import (
 	"github.com/sudosoc/rectool/internal/modules/footprint"
 	"github.com/sudosoc/rectool/internal/modules/images"
 	"github.com/sudosoc/rectool/internal/modules/ip"
+	"github.com/sudosoc/rectool/internal/modules/mentions"
 	"github.com/sudosoc/rectool/internal/modules/people"
 	"github.com/sudosoc/rectool/internal/modules/phone"
 	"github.com/sudosoc/rectool/internal/modules/profiles"
@@ -145,6 +146,7 @@ func Build(o Options) (*Built, error) {
 	eng.Register(people.New(people.Config{Searcher: searcher, Browser: o.Browser}))
 	eng.Register(images.New())
 	eng.Register(breach.New())
+	eng.Register(mentions.New())
 	eng.Register(devtrace.New())
 	eng.Register(docmeta.New())
 	eng.Register(records.New())
