@@ -28,6 +28,7 @@ import (
 
 	"github.com/sudosoc/rectool/internal/app"
 	"github.com/sudosoc/rectool/internal/engine"
+	"github.com/sudosoc/rectool/internal/health"
 	"github.com/sudosoc/rectool/internal/httpx"
 	"github.com/sudosoc/rectool/internal/media"
 	"github.com/sudosoc/rectool/internal/modules/dorks"
@@ -46,6 +47,7 @@ type Config struct {
 	Base       app.Options // defaults for every scan (proxies, workers, sites, ...)
 	MaxRunning int         // concurrent scans (default 2)
 	ReportDir  string      // when set, finished reports are also saved here
+	CaseDir    string      // when set, finished scans are kept as re-openable cases here
 }
 
 // Server is the web UI server.
@@ -53,6 +55,7 @@ type Server struct {
 	cfg      Config
 	token    string
 	mgr      *manager
+	cases    *caseStore
 	modules  []moduleInfo
 	siteCnt  int
 	loopback bool
@@ -109,6 +112,8 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	}
 	s.siteCnt = built.SocialSites
 	s.mgr = newManager(ctx, cfg.Base, cfg.MaxRunning, cfg.ReportDir)
+	s.cases = &caseStore{dir: cfg.CaseDir}
+	s.mgr.cases = s.cases
 	if s.img, err = httpx.New(httpx.Options{Timeout: cfg.Base.Timeout, Retries: 1, Proxies: cfg.Base.Proxies}); err != nil {
 		return nil, err
 	}
@@ -121,12 +126,24 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	mux.HandleFunc("POST /api/scans/{id}/cancel", s.handleCancel)
 	mux.HandleFunc("GET /api/scans/{id}/events", s.handleEvents)
 	mux.HandleFunc("GET /api/scans/{id}/export", s.handleExport)
+	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/cases", s.handleCases)
+	mux.HandleFunc("GET /api/cases/{id}", s.handleCaseGet)
+	mux.HandleFunc("POST /api/cases/{id}/open", s.handleCaseOpen)
+	mux.HandleFunc("DELETE /api/cases/{id}", s.handleCaseDelete)
 	mux.HandleFunc("GET /api/img", s.handleImage)
+	mux.HandleFunc("GET /api/tile/{z}/{x}/{y}", newTileProxy(s.img).handle)
 	sub, _ := fs.Sub(staticFS, "static")
 	mux.Handle("GET /", http.FileServerFS(sub))
 
 	s.handler = s.secure(mux)
 	return s, nil
+}
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	writeJSON(w, http.StatusOK, health.Check(ctx, s.img))
 }
 
 // Token returns the access token.

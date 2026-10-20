@@ -161,6 +161,7 @@ type manager struct {
 	maxRunning int
 	maxKept    int
 	reportDir  string
+	cases      *caseStore
 
 	mu    sync.Mutex
 	scans map[string]*scan
@@ -313,6 +314,7 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 
 // saveReport optionally persists finished reports (JSON/CSV/TXT, mode 0600).
 func (m *manager) saveReport(rep *models.Report) {
+	m.cases.save(rep)
 	if m.reportDir == "" {
 		return
 	}

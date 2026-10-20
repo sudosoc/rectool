@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ func sample() *models.Report {
 
 func TestAllFormats(t *testing.T) {
 	r := sample()
-	for _, f := range []string{"json", "csv", "txt", "html", "graphml", "stix", "entities"} {
+	for _, f := range []string{"json", "csv", "txt", "html", "graphml", "stix", "entities", "misp", "spiderfoot", "maltego"} {
 		var b bytes.Buffer
 		if err := Render(&b, r, f); err != nil {
 			t.Fatalf("%s: %v", f, err)
@@ -59,4 +60,18 @@ func TestAllFormats(t *testing.T) {
 	if err := Render(&bytes.Buffer{}, r, "bogus"); err == nil {
 		t.Fatal("unknown format accepted")
 	}
+}
+
+func TestLivePDF(t *testing.T) {
+	if os.Getenv("RECTOOL_LIVE") == "" {
+		t.Skip("live")
+	}
+	var b bytes.Buffer
+	if err := Render(&b, sample(), "pdf"); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.HasPrefix(b.Bytes(), []byte("%PDF")) {
+		t.Fatalf("not a pdf: %d bytes", b.Len())
+	}
+	t.Logf("pdf %d bytes", b.Len())
 }

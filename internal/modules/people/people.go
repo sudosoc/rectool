@@ -73,6 +73,7 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 		{"notes", pastedProfile},
 		{"crossref", crossref},
 		{"wikipedia", wikipediaPerson},
+		{"archiveorg", archiveOrg},
 		{"stackoverflow", stackExchange},
 		{"huggingface", huggingFace},
 		{"webfinger", webfinger},

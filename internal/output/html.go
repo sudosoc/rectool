@@ -44,6 +44,7 @@ type htmlData struct {
 	Started    string
 	Duration   string
 	Target     [][2]string
+	Summary    []string
 	Identities []htmlIdentity
 	Gallery    []htmlPhoto
 	Categories []htmlCategory
@@ -84,6 +85,25 @@ func writeHTML(w io.Writer, r *models.Report) error {
 			d.Target = append(d.Target, kv)
 		}
 	}
+	if len(r.Identities) > 0 && !r.Identities[0].Weak {
+		top := r.Identities[0]
+		d.Summary = append(d.Summary, fmt.Sprintf("Best match: %s (match score %d%%)", top.Label, int(top.Score*100+0.5)))
+		for _, p := range []struct {
+			n string
+			c int
+		}{{"e-mail address(es)", len(top.Emails)}, {"phone number(s)", len(top.Phones)}, {"account(s)", len(top.Usernames)}, {"employer(s)", len(top.Employers)}, {"website(s)", len(top.Websites)}} {
+			if p.c > 0 {
+				d.Summary = append(d.Summary, fmt.Sprintf("%d %s", p.c, p.n))
+			}
+		}
+	}
+	if r.Ambiguity != "" {
+		d.Summary = append(d.Summary, "Ambiguity: "+r.Ambiguity)
+	}
+	if g := r.Geo; g != nil && g.Consensus != "" {
+		d.Summary = append(d.Summary, "Most likely location: "+g.Consensus)
+	}
+	d.Summary = append(d.Summary, fmt.Sprintf("%d findings from %d collectors; %d checks could not complete", len(r.Hits()), len(r.Modules), len(r.Failures)))
 	for _, id := range r.Identities {
 		hi := htmlIdentity{Identity: id, Pct: int(id.Score*100 + 0.5)}
 		for _, g := range []htmlFactGroup{
@@ -180,6 +200,9 @@ a{color:var(--acc);word-break:break-all}code{font-size:12px;word-break:break-all
 
 <h2>Target</h2>
 <div class="card"><table>{{range .Target}}<tr><th>{{index . 0}}</th><td>{{index . 1}}</td></tr>{{end}}</table></div>
+
+<h2>Summary</h2>
+<div class="card">{{range .Summary}}<div>• {{.}}</div>{{end}}</div>
 
 <h2>Identities</h2>
 {{if .R.Ambiguity}}<div class="card warn">{{.R.Ambiguity}}</div>{{end}}

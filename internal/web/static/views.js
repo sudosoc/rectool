@@ -574,6 +574,12 @@
     const open = el("button", { type: "button", class: "ghost small", text: "Show full profile" });
     open.addEventListener("click", () => { c.replaceWith(dossier(id)); });
     row.append(use, open);
+    const topId = (RT.S.identities || []).find((x) => x.primary) || (RT.S.identities || [])[0];
+    if (topId && topId.id !== id.id) {
+      const cmpB = el("button", { type: "button", class: "ghost small", text: "Compare with best match" });
+      cmpB.addEventListener("click", () => RT.compareIdentities(topId, id));
+      row.append(cmpB);
+    }
     c.append(row);
     return c;
   }

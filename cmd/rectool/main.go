@@ -218,7 +218,7 @@ func runSelfTest(ctx context.Context, ui *output.Console, opts app.Options, time
 
 // runWeb starts the browser UI and blocks until interrupted.
 func runWeb(ctx context.Context, ui *output.Console, opts app.Options, addr, token string, maxScans int, reportDir string) int {
-	srv, err := web.New(ctx, web.Config{Addr: addr, Token: token, Base: opts, MaxRunning: maxScans, ReportDir: reportDir})
+	srv, err := web.New(ctx, web.Config{Addr: addr, Token: token, Base: opts, MaxRunning: maxScans, ReportDir: reportDir, CaseDir: web.DefaultCaseDir()})
 	if err != nil {
 		ui.Error("web: %v", err)
 		return 2

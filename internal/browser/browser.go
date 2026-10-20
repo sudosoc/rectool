@@ -101,3 +101,30 @@ func Blocked(dom string) bool {
 	}
 	return len(strings.TrimSpace(dom)) < 200
 }
+
+// PrintPDF renders a local HTML file to a PDF with the same headless browser.
+func PrintPDF(ctx context.Context, bin, htmlPath, pdfPath string) error {
+	profile, err := os.MkdirTemp("", "rectool-browser-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(profile)
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	abs, err := filepath.Abs(htmlPath)
+	if err != nil {
+		return err
+	}
+	u := "file:///" + strings.TrimPrefix(filepath.ToSlash(abs), "/")
+	args := []string{"--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--user-data-dir=" + profile,
+		"--no-pdf-header-footer", "--print-to-pdf=" + pdfPath, u}
+	if out, err := exec.CommandContext(ctx, bin, args...).CombinedOutput(); err != nil {
+		if _, serr := os.Stat(pdfPath); serr != nil {
+			return errors.New("browser could not print the PDF: " + strings.TrimSpace(string(out)))
+		}
+	}
+	if st, err := os.Stat(pdfPath); err != nil || st.Size() == 0 {
+		return errors.New("browser produced no PDF")
+	}
+	return nil
+}

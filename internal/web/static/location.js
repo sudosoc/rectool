@@ -67,6 +67,63 @@
     }
   }
 
+  // Real map: OpenStreetMap tiles fetched through this server (/api/tile),
+  // drawn on the canvas with the evidence markers on top. Zoom stops at city level.
+  function drawTiles(canvas, geo, status) {
+    const pts = geo.points || [];
+    if (!pts.length) return;
+    const W = canvas.clientWidth || 800, H = Math.round(W * 0.55);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.height = H + "px";
+    const g = canvas.getContext("2d");
+    g.scale(dpr, dpr);
+    const lat2y = (lat, z) => ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * 256 * 2 ** z;
+    const lon2x = (lon, z) => ((lon + 180) / 360) * 256 * 2 ** z;
+    const lats = pts.map((p) => p.lat), lons = pts.map((p) => p.lon);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats), minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    let z = 11;
+    for (; z > 1; z--) {
+      if (Math.abs(lon2x(maxLon, z) - lon2x(minLon, z)) < W * 0.8 && Math.abs(lat2y(minLat, z) - lat2y(maxLat, z)) < H * 0.8) break;
+    }
+    const cx = (lon2x(minLon, z) + lon2x(maxLon, z)) / 2, cy = (lat2y(minLat, z) + lat2y(maxLat, z)) / 2;
+    const x0 = cx - W / 2, y0 = cy - H / 2;
+    g.fillStyle = "#1b222b"; g.fillRect(0, 0, W, H);
+    const n = 2 ** z;
+    let pending = 0, failed = 0;
+    const markers = () => {
+      for (const p of pts) {
+        const col = (KIND[p.kind] || ["#fff"])[0];
+        const x = lon2x(p.lon, z) - x0, y = lat2y(p.lat, z) - y0;
+        g.beginPath(); g.arc(x, y, 5 + p.weight * 6, 0, Math.PI * 2);
+        g.fillStyle = col + "aa"; g.fill(); g.strokeStyle = "#fff"; g.lineWidth = 1.5; g.stroke();
+      }
+      const top = (geo.clusters || [])[0];
+      if (top) {
+        const x = lon2x(top.lon, z) - x0, y = lat2y(top.lat, z) - y0;
+        g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.strokeStyle = "#35d08a"; g.lineWidth = 3; g.stroke();
+        g.font = "600 13px system-ui, sans-serif"; g.textBaseline = "middle";
+        const tw = g.measureText(top.label).width;
+        g.fillStyle = "rgba(10,13,18,0.8)"; g.fillRect(x + 20, y - 11, tw + 12, 22);
+        g.fillStyle = "#fff"; g.fillText(top.label, x + 26, y);
+      }
+      g.font = "10px system-ui"; g.fillStyle = "rgba(255,255,255,0.8)"; g.fillText("© OpenStreetMap contributors", 6, H - 8);
+      if (failed) status.textContent = failed + " tile(s) could not be loaded.";
+    };
+    const tx0 = Math.floor(x0 / 256), tx1 = Math.floor((x0 + W) / 256), ty0 = Math.floor(y0 / 256), ty1 = Math.floor((y0 + H) / 256);
+    for (let tx = tx0; tx <= tx1; tx++) {
+      for (let ty = ty0; ty <= ty1; ty++) {
+        if (ty < 0 || ty >= n) continue;
+        pending++;
+        const img = new Image();
+        const done = () => { if (--pending === 0) markers(); };
+        img.onload = () => { g.drawImage(img, tx * 256 - x0, ty * 256 - y0); done(); };
+        img.onerror = () => { failed++; done(); };
+        img.src = `/api/tile/${z}/${((tx % n) + n) % n}/${ty}`;
+      }
+    }
+    if (pending === 0) markers();
+  }
+
   function osmLink(p) {
     return `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=${p.precision === "country" ? 5 : p.precision === "region" ? 7 : 11}/${p.lat}/${p.lon}`;
   }
@@ -120,6 +177,11 @@
       dot.style.background = c;
       legend.append(el("span", { class: "chip" }, dot, el("span", { text: label })));
     });
+    const mapBtn = el("button", { type: "button", class: "ghost small", text: "Load street map (OpenStreetMap tiles via rectool)" });
+    const mapStatus = el("span", { class: "hint-line" });
+    mapBtn.title = "The map tiles are downloaded by rectool from tile.openstreetmap.org (they reveal which area you are viewing to OpenStreetMap, nothing about the subject). Zoom stops at city level.";
+    mapBtn.addEventListener("click", () => { mapBtn.disabled = true; mapStatus.textContent = " loading tiles…"; drawTiles(canvas, geo, mapStatus); mapStatus.textContent = ""; });
+    mapPanel.append(el("div", { style: "margin-top:8px" }, mapBtn, mapStatus));
     mapPanel.append(legend, el("p", { class: "hint-line", text: "Dot size = how much that evidence is trusted. Green ring = best-supported place. Shaded strip = the timezone estimated from activity hours. Outlines are schematic." }));
     root.append(mapPanel);
     requestAnimationFrame(() => drawMap(canvas, geo));

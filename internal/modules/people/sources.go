@@ -2,6 +2,7 @@ package people
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"net/url"
 	"regexp"
@@ -303,4 +304,37 @@ func huggingFace(ctx context.Context, c *httpx.Client, t models.Target, emit fun
 			Usernames: []string{"huggingface:" + u.User}, Self: true}
 		emit(finding("Hugging Face member", "person", 0.45, rec, t))
 	}
+}
+
+// archiveOrg lists works in the Internet Archive (books, papers, talks,
+// recordings) credited to the name: a publication trail for authors.
+func archiveOrg(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding)) {
+	if len(strings.Fields(t.FullName)) < 2 {
+		return
+	}
+	var r struct {
+		Response struct {
+			Docs []struct {
+				ID      string `json:"identifier"`
+				Title   string `json:"title"`
+				Year    any    `json:"year"`
+				Creator any    `json:"creator"`
+			} `json:"docs"`
+		} `json:"response"`
+	}
+	q := `creator:"` + t.FullName + `"`
+	if !getJSON(ctx, c, "https://archive.org/advancedsearch.php?output=json&rows=12&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=creator&q="+esc(q), nil, &r) || len(r.Response.Docs) == 0 {
+		return
+	}
+	var works []string
+	for _, d := range r.Response.Docs {
+		w := strings.TrimSpace(d.Title)
+		if y := fmt.Sprint(d.Year); d.Year != nil && y != "" && y != "<nil>" {
+			w += " (" + y + ")"
+		}
+		works = append(works, w)
+	}
+	emit(models.Finding{Source: "Internet Archive works", Category: "publication", URL: "https://archive.org/search?query=" + esc(q), Status: models.StatusUncertain, Confidence: 0.4,
+		Details: map[string]string{"works credited to the name": strings.Join(works, "; "), "count shown": fmt.Sprint(len(works)),
+			"note": "any author with this name; not tied to your subject until another source confirms it"}})
 }
