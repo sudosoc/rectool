@@ -46,6 +46,7 @@ type scan struct {
 	progress map[string][2]int
 	hits     int
 	report   *models.Report
+	caseID   string           // saved case file this scan belongs to
 	all      []models.Finding // positive findings so far, for live identity resolution
 	cancel   context.CancelFunc
 }
@@ -300,7 +301,10 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 			sc.finish(stateFailed, err.Error(), nil, event{Type: "error", Data: map[string]string{"error": err.Error()}})
 			return
 		}
-		m.saveReport(rep)
+		sc.mu.Lock()
+		sc.caseID = m.cases.save(rep)
+		sc.mu.Unlock()
+		m.saveReportFiles(rep)
 		summary := *rep
 		summary.Findings = nil // hits were already streamed
 		state := stateDone
@@ -313,8 +317,7 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 }
 
 // saveReport optionally persists finished reports (JSON/CSV/TXT, mode 0600).
-func (m *manager) saveReport(rep *models.Report) {
-	m.cases.save(rep)
+func (m *manager) saveReportFiles(rep *models.Report) {
 	if m.reportDir == "" {
 		return
 	}

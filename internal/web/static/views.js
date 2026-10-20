@@ -475,16 +475,28 @@
     return el("span", { class: "badge-c single", title: "One third-party source: " + (f.sources || []).join(", ") + tr, text: "1 source" + (f.trust ? " · " + Math.round(f.trust * 100) + "%" : "") });
   }
 
+  // ---- trust colours: green = stated by 2+ platforms, amber = the person's own profile (or reliable
+  // source), grey = a single third-party source
+  const trustCls = (f) => (f.confirmed ? "t-hi" : f.self || (f.trust || 0) >= 0.6 ? "t-mid" : "t-lo");
+
+  function factItem(f, mono) {
+    const href = /^https?:\/\//.test(f.value) ? RT.safeHref(f.value) : null;
+    const v = href ? el("a", { class: "v", href, target: "_blank", rel: "noopener noreferrer", text: f.value }) : el("span", { class: "v" + (mono ? " mono" : ""), text: f.value });
+    return el("div", { class: "fv tr " + trustCls(f) }, v, factBadge(f));
+  }
+
+  // Summary mode shows what is confirmed or self-reported (or the single best
+  // fact of a row); "show everything" reveals the rest.
   function factList(facts, max, mono) {
+    const all = facts || [];
+    const sure = all.filter((f) => f.confirmed || f.self);
+    let shown = RT.ui.full ? all.slice(0, max) : (sure.length ? sure : all.slice(0, 1)).slice(0, max);
     const box = el("div", { class: "fvals" });
-    for (const f of (facts || []).slice(0, max)) {
-      const href = /^https?:\/\//.test(f.value) ? RT.safeHref(f.value) : null;
-      const v = href ? el("a", { class: "v", href, target: "_blank", rel: "noopener noreferrer", text: f.value }) : el("span", { class: "v" + (mono ? " mono" : ""), text: f.value });
-      box.append(el("div", { class: "fv" }, v, factBadge(f)));
-    }
-    if ((facts || []).length > max) {
-      const more = el("button", { type: "button", class: "ghost small", text: `+${facts.length - max} more` });
-      more.addEventListener("click", () => { more.replaceWith(...facts.slice(max).map((f) => el("div", { class: "fv" }, el("span", { class: "v", text: f.value }), factBadge(f)))); });
+    shown.forEach((f) => box.append(factItem(f, mono)));
+    const rest = all.filter((f) => !shown.includes(f));
+    if (rest.length) {
+      const more = el("button", { type: "button", class: "ghost small", text: `+${rest.length} ${RT.ui.full ? "more" : "less certain"}` });
+      more.addEventListener("click", () => { more.replaceWith(...rest.map((f) => factItem(f, mono))); });
       box.append(more);
     }
     return box;
@@ -493,6 +505,17 @@
   function scoreChip(id) {
     const p = Math.round(id.score * 100);
     return el("span", { class: "score " + (p >= 70 ? "hi" : p >= 40 ? "mid" : "lo"), title: "How well this person matches what you supplied" }, "match " + p + "%");
+  }
+
+  const cmpPick = new Set();
+  const KEY_ROWS = ["headlines", "employers", "locations", "education", "emails", "phones", "usernames", "websites", "interests"];
+
+  function showConflict(label, facts) {
+    $("drawerTitle").textContent = "Sources disagree: " + label;
+    const body = $("drawerBody");
+    body.replaceChildren(el("p", { class: "hint-line", text: "Each value below is stated by the listed sources. They may describe a move, an old address, or different people." }));
+    for (const f of facts) body.append(el("div", { class: "frow" }, el("div", { class: "k", text: f.confirmed ? "confirmed" : "stated" }), el("div", {}, el("b", { text: f.value }), el("div", { class: "muted", text: (f.sources || []).join(" · ") }))));
+    $("drawer").hidden = false;
   }
 
   function dossier(id, S) {
@@ -504,24 +527,6 @@
       img.addEventListener("load", () => ph.replaceChildren(img));
       ph.addEventListener("click", () => RT.showPhoto({ url: photo, sources: id.records.map((r) => r.platform), group: 0 }));
     }
-    const head = el("div", { class: "d-head" }, el("h2", { text: (id.names[0] && id.names[0].value) || "Unnamed profile" }),
-      el("div", { class: "d-sub", text: [ (id.headlines[0] || {}).value, (id.locations[0] || {}).value ].filter(Boolean).join(" · ") }));
-    const chips = el("div", { class: "chips" }, scoreChip(id));
-    for (const m of id.matched || []) chips.append(el("span", { class: "chip strong" }, el("span", { class: "k", text: "matches" }), el("span", { text: m })));
-    head.append(chips);
-    const rows = el("div", {});
-    for (const [key, label] of FACT_ROWS) {
-      const facts = id[key];
-      if (!facts || !facts.length) continue;
-      rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: label }), factList(facts, key === "interests" ? 12 : 6, key === "emails" || key === "phones" || key === "usernames")));
-    }
-    if (id.bio) rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "About" }), el("div", { text: RT.clip(id.bio, 600) })));
-    if ((id.documents || []).length) {
-      const box = el("div", { class: "fvals" });
-      for (const d of id.documents) box.append(el("a", { href: RT.safeHref(d) || "#", target: "_blank", rel: "noopener noreferrer", text: d }));
-      rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "CV / resume" }), box));
-    }
-    const right = el("div", {}, head, el("div", { style: "margin-top:10px" }, rows));
     const left = el("div", { class: "d-left" }, ph);
     const extra = el("div", { class: "d-thumbs" });
     for (const u of (id.photos || []).slice(1, 9)) {
@@ -533,7 +538,59 @@
       extra.append(t);
     }
     left.append(extra);
-    card.append(el("div", { class: "dossier" }, left, right));
+
+    // conflicts the identity records, mapped to the rows they concern
+    const conflictRows = new Set();
+    for (const c of id.conflicts || []) { if (/different locations/.test(c)) conflictRows.add("locations"); if (/names differ/.test(c)) conflictRows.add("names"); }
+
+    const confirmedN = ["names", "headlines", "employers", "locations", "education", "interests", "emails", "phones", "usernames", "websites"]
+      .reduce((n, k) => n + (id[k] || []).filter((f) => f.confirmed).length, 0);
+    const p = Math.round(id.score * 100);
+    const kpi = (n, l, cls) => el("div", { class: "hk " + (cls || "") }, el("span", { class: "n", text: String(n) }), el("span", { class: "l", text: l }));
+    const kpis = el("div", { class: "hero-kpis" },
+      kpi(p + "%", "match", p >= 70 ? "hi" : p >= 40 ? "mid" : "lo"),
+      kpi(id.records.length, "sources", id.records.length >= 3 ? "hi" : ""),
+      kpi(confirmedN, "confirmed facts", confirmedN ? "hi" : "lo"),
+      kpi((id.usernames || []).length, "accounts"));
+    const chips = el("div", { class: "chips" });
+    for (const m of id.matched || []) chips.append(el("span", { class: "chip strong" }, el("span", { class: "k", text: "matches" }), el("span", { text: m })));
+    const main = el("div", { class: "d-head" },
+      el("h2", { text: (id.names[0] && id.names[0].value) || "Unnamed profile" }),
+      el("div", { class: "d-sub", text: [(id.headlines[0] || {}).value, (id.locations[0] || {}).value].filter(Boolean).join(" · ") }),
+      chips, kpis);
+    const legend = el("div", { class: "legend-trust" });
+    for (const [c, t] of [["t-hi", "confirmed by 2+ platforms"], ["t-mid", "own profile / reliable source"], ["t-lo", "single third-party source"]]) {
+      const d = el("span", { class: "tdot " + c });
+      d.style.background = "var(--tc)";
+      legend.append(el("span", { class: "k " + c }, d, document.createTextNode(t)));
+    }
+    main.append(legend);
+    const hidden = KEY_ROWS.reduce((n, k) => n + (id[k] || []).filter((f) => !(f.confirmed || f.self)).length, 0);
+    const tog = el("button", { type: "button", class: "ghost small detail-toggle", text: RT.ui.full ? "Show only confirmed and self-reported" : `Show every detail${hidden ? ` (${hidden} less certain hidden)` : ""}` });
+    tog.addEventListener("click", () => { RT.ui.full = !RT.ui.full; RT.store.set("full", RT.ui.full ? "1" : "0"); RT.scheduleRender(true); });
+    main.append(tog);
+
+    const rows = el("div", {});
+    const addRow = (key, label, facts, max, mono) => {
+      if (!facts || !facts.length) return;
+      const conflict = conflictRows.has(key);
+      const row = el("div", { class: "frow" + (conflict ? " conflict-row" : "") }, el("div", { class: "k", text: label }), el("div", {}, factList(facts, max, mono)));
+      if (conflict) {
+        const b = el("button", { type: "button", class: "ghost small", text: "See who says what" });
+        b.addEventListener("click", () => showConflict(label, facts));
+        row.lastChild.append(el("div", { class: "cnote" }, "⚠ sources disagree here", b));
+      }
+      rows.append(row);
+    };
+    if (conflictRows.has("names")) addRow("names", "Names", id.names, 6, false);
+    for (const [key, label] of FACT_ROWS) addRow(key, label, id[key], key === "interests" ? 12 : 6, key === "emails" || key === "phones" || key === "usernames");
+    if (id.bio) rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "About" }), el("div", { text: RT.clip(id.bio, 600) })));
+    if ((id.documents || []).length) {
+      const box = el("div", { class: "fvals" });
+      for (const d of id.documents) box.append(el("a", { href: RT.safeHref(d) || "#", target: "_blank", rel: "noopener noreferrer", text: d }));
+      rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "CV / resume" }), box));
+    }
+    card.append(el("div", { class: "hero" }, left, el("div", {}, main)), rows);
     for (const c of id.conflicts || []) card.append(el("div", { class: "conflict", text: "⚠ " + c }));
     if ((id.reasons || []).length) {
       const det = el("details", { style: "margin-top:10px" }, el("summary", { text: "Why these sources are treated as the same person" }));
@@ -550,50 +607,51 @@
     }
     recs.append(chips2);
     card.append(recs);
-    const act = el("div", { style: "margin-top:10px" });
+    const act = el("div", { style: "margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center" });
     const b = el("button", { type: "button", class: "ghost small", text: "Use these details to search again" });
     b.title = "Fills the form with this person's name, location, employer, e-mail, account and website";
     b.addEventListener("click", () => RT.refine(id));
-    act.append(b);
+    const cb = el("input", { type: "checkbox" });
+    cb.checked = cmpPick.has(id.id);
+    cb.addEventListener("change", () => { cb.checked ? cmpPick.add(id.id) : cmpPick.delete(id.id); });
+    act.append(b, el("label", { class: "check small" }, cb, document.createTextNode("pick for comparison")));
     card.append(act);
+    card.append(el("details", { style: "margin-top:10px", open: !!RT.notes.get("identity") }, el("summary", { text: "Your notes on this person" }), RT.notes.box("identity", "What you verified, doubts, next steps…")));
     return card;
   }
 
-  function candidate(id, best) {
-    const c = el("div", { class: "cand" + (best ? " best" : "") });
-    const top = el("div", { class: "cand-top" }, el("div", { class: "t", text: id.label }), scoreChip(id));
-    c.append(top);
-    const sub = [];
-    if ((id.employers[0] || {}).value) sub.push("works at " + id.employers[0].value);
-    if ((id.education[0] || {}).value) sub.push("studied at " + id.education[0].value);
-    sub.push(id.records.map((r) => r.platform).join(" · "));
-    c.append(el("div", { class: "muted", text: sub.join(" — ") }));
-    const row = el("div", { class: "chips" });
-    const use = el("button", { type: "button", class: "ghost small", text: "This is the person: search again with these details" });
-    use.addEventListener("click", () => RT.refine(id));
-    const open = el("button", { type: "button", class: "ghost small", text: "Show full profile" });
-    open.addEventListener("click", () => { c.replaceWith(dossier(id)); });
-    row.append(use, open);
-    const topId = (RT.S.identities || []).find((x) => x.primary) || (RT.S.identities || [])[0];
-    if (topId && topId.id !== id.id) {
-      const cmpB = el("button", { type: "button", class: "ghost small", text: "Compare with best match" });
-      cmpB.addEventListener("click", () => RT.compareIdentities(topId, id));
-      row.append(cmpB);
+  // A compact card for another candidate, laid out so several can be read side by side.
+  function candidate(id, best, topId) {
+    const c = el("div", { class: "ccard" + (best ? " best" : "") });
+    const ph = el("div", { class: "cph", text: "👤" });
+    if ((id.photos || [])[0]) { const im = el("img", { src: RT.imgSrc(id.photos[0]), alt: "", loading: "lazy" }); im.addEventListener("load", () => ph.replaceChildren(im)); }
+    c.append(el("div", { class: "ctop" }, ph, el("div", {}, el("div", { class: "cn", text: id.label }), scoreChip(id))));
+    const have = new Set();
+    if (topId) for (const k of ["employers", "locations", "education"]) for (const f of topId[k] || []) have.add(f.value.toLowerCase());
+    const ul = el("ul", {});
+    for (const [k, lab] of [["employers", "works at"], ["locations", "in"], ["education", "studied at"], ["emails", "e-mail"]]) {
+      const f = (id[k] || [])[0];
+      if (f) ul.append(el("li", { class: topId && !have.has(f.value.toLowerCase()) && k !== "emails" ? "diff" : "", text: `${lab} ${f.value}` }));
     }
+    if (ul.childNodes.length) c.append(ul);
+    c.append(el("div", { class: "cs", text: id.records.map((r) => r.platform).join(" · ") }));
+    const row = el("div", { class: "pickrow" });
+    const use = el("button", { type: "button", class: "ghost small", text: "This is the person" });
+    use.title = "Search again with these details";
+    use.addEventListener("click", () => RT.refine(id));
+    const open = el("button", { type: "button", class: "ghost small", text: "Full profile" });
+    open.addEventListener("click", () => { c.replaceWith(dossier(id)); });
+    const cb = el("input", { type: "checkbox" });
+    cb.checked = cmpPick.has(id.id);
+    cb.addEventListener("change", () => { cb.checked ? cmpPick.add(id.id) : cmpPick.delete(id.id); });
+    row.append(use, open, el("label", { class: "check small" }, cb, document.createTextNode("compare")));
     c.append(row);
     return c;
   }
 
-  // glance: a one-line count of what is known about the best match, and what
-  // to add to learn more or to separate it from other people.
-  function glance(top, S) {
+  // What to add to learn more or to tighten the match.
+  function tipsPanel(top, S) {
     const n = (k) => (top[k] || []).length;
-    const stats = el("div", { class: "kpis" });
-    for (const [k, label] of [["emails", "e-mails"], ["phones", "phones"], ["usernames", "accounts"], ["employers", "employers"], ["education", "schools"], ["websites", "websites"], ["photos", "photos"], ["documents", "CVs"]]) {
-      const c = k === "documents" ? (top.documents || []).length : n(k);
-      stats.append(el("div", { class: "kpi" + (c ? " accent" : ""), style: "cursor:default" }, el("span", { class: "n", text: String(c) }), el("span", { class: "l", text: label })));
-    }
-    const wrap = el("div", { class: "panel" }, el("h3", { text: "At a glance — " + (top.label || "best match") }), stats);
     const t = S.target || {};
     const tips = [];
     const ambiguous = !!S.ambiguity || S.sameName > 1 || !top.primary;
@@ -604,12 +662,16 @@
     if (!t.domain && n("websites")) tips.push("Website found: " + top.websites[0].value + ". Enter its domain to map DNS, subdomains, technologies and contacts.");
     if (!n("photos")) tips.push("No verified photo. Check Photos → unverified candidates, or use the reverse image links on any picture.");
     if (!(t.notes || "").trim() && !(t.links || []).length) tips.push("Open the person's LinkedIn yourself and paste the page text into the Paste text box (e-mail, CV and full history only appear to logged-in viewers).");
-    if (tips.length) {
-      const ul = el("ul", { class: "reasons" });
-      tips.slice(0, 5).forEach((x) => ul.append(el("li", { text: x })));
-      wrap.append(el("h4", { class: "sec-title", text: "To learn more or tighten the match" }), ul);
-    }
-    return wrap;
+    if (!tips.length) return null;
+    const ul = el("ul", { class: "reasons" });
+    tips.slice(0, 5).forEach((x) => ul.append(el("li", { text: x })));
+    return el("details", { class: "panel", open: ambiguous }, el("summary", { text: "To learn more or tighten the match" }), ul);
+  }
+
+  function skeleton() {
+    const card = el("div", { class: "panel skel-card" }, el("div", { class: "skel skel-photo" }),
+      el("div", { class: "skel-lines" }, ...[60, 40, 90, 75, 55].map((w) => { const l = el("div", { class: "skel skel-line" }); l.style.width = w + "%"; return l; })));
+    return card;
   }
 
   function identityView() {
@@ -620,19 +682,20 @@
     const weak = all.filter((i) => i.weak);
     if (!ids.length && weak.length) { ids.push(...weak.splice(0, 1)); }
     if (!ids.length) {
-      root.append(el("div", { class: "panel muted", text: S.state === "running"
-        ? "No person profile yet… as soon as collectors return profile data (LinkedIn, ORCID, GitHub, Wikidata, personal sites, CVs) the people they describe appear here, kept apart."
-        : "No person profiles were found. Give a full name plus a location, employer or e-mail, paste a LinkedIn/CV text, or a username, and run again." }));
+      if (S.state === "running") {
+        root.append(skeleton(), el("p", { class: "hint-line", text: "Collecting… as soon as collectors return profile data (LinkedIn, ORCID, GitHub, Wikidata, personal sites, CVs) the people they describe appear here, kept apart." }));
+      } else {
+        root.append(el("div", { class: "panel muted", text: "No person profiles were found. Give a full name plus a location, employer or e-mail, paste a LinkedIn/CV text, or a username, and run again." }));
+      }
       return;
     }
     if (S.ambiguity) {
       root.append(el("div", { class: "id-banner" }, el("b", { text: "Several people match. " }), S.ambiguity,
         " Their facts are shown separately, never merged, and none of their e-mails or accounts is followed until you choose one."));
     } else if (S.sameName > 1) {
-      root.append(el("div", { class: "id-banner" }, el("b", { text: `${S.sameName} people share this name. ` }), "The best match is shown first; the others are listed below."));
+      root.append(el("div", { class: "id-banner" }, el("b", { text: `${S.sameName} people share this name. ` }), "The best match is shown first; the others are listed beside it."));
     }
     const top = ids[0];
-    root.append(glance(top, S));
     if (top.primary) {
       root.append(dossier(top, S));
     } else {
@@ -641,11 +704,20 @@
     const rest = top.primary ? ids.slice(1) : ids;
     if (rest.length) {
       const wrap = el("div", { class: "panel" }, el("h3", { text: top.primary ? `Other people matching (${rest.length})` : `Candidates (${rest.length})` }));
-      const list = el("div", { class: "cands" });
-      rest.forEach((id, i) => list.append(candidate(id, !top.primary && i === 0)));
+      const cmpBtn = el("button", { type: "button", class: "ghost small", text: "Compare the ticked people" });
+      cmpBtn.addEventListener("click", () => {
+        const picked = ids.filter((i) => cmpPick.has(i.id));
+        if (picked.length < 2) { alert("Tick two people first (the checkbox on each card)."); return; }
+        RT.compareIdentities(picked[0], picked[1]);
+      });
+      wrap.append(el("div", { style: "margin:6px 0 10px" }, cmpBtn));
+      const list = el("div", { class: "cand-grid" });
+      rest.forEach((id, i) => list.append(candidate(id, !top.primary && i === 0, top.primary ? top : null)));
       wrap.append(list);
       root.append(wrap);
     }
+    const tp = tipsPanel(top, S);
+    if (tp) root.append(tp);
     if (weak.length) {
       const det = el("details", { class: "panel" }, el("summary", { text: `Accounts that only share the handle (${weak.length}) — probably other people` }),
         el("p", { class: "hint-line", text: "These accounts have no name and nothing else tying them to your subject. They are shown for completeness and are never followed." }));

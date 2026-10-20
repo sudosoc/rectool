@@ -135,6 +135,36 @@ func writeTXT(w io.Writer, r *models.Report) error {
 		b.WriteString("  (* = strong lead, followed automatically)\n")
 	}
 
+	if g := r.Geo; g != nil {
+		b.WriteString("\nLOCATION ANALYSIS\n")
+		if g.Consensus != "" {
+			fmt.Fprintf(&b, "  most likely : %s\n", g.Consensus)
+		}
+		if g.Conflict != "" {
+			fmt.Fprintf(&b, "  conflict    : %s\n", g.Conflict)
+		}
+		if g.TZ != nil {
+			fmt.Fprintf(&b, "  timezone    : %s (confidence %.0f%%, %d events)\n", g.TZ.Label, g.TZ.Confidence*100, g.TZ.Events)
+		}
+		for _, p := range g.Points {
+			fmt.Fprintf(&b, "  - [%s/%s] %s -> %.4f,%.4f  (trust %.0f%%)  %s\n", p.Kind, p.Precision, p.Label, p.Lat, p.Lon, p.Weight*100, strings.Join(p.Sources, "; "))
+		}
+		for _, n := range g.Notes {
+			fmt.Fprintf(&b, "  note: %s\n", n)
+		}
+	}
+	if len(r.Notes) > 0 {
+		b.WriteString("\nANALYST NOTES\n")
+		keys := make([]string, 0, len(r.Notes))
+		for k := range r.Notes {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			fmt.Fprintf(&b, "  [%s]\n    %s\n", noteTitle(k), strings.ReplaceAll(r.Notes[k], "\n", "\n    "))
+		}
+	}
+
 	b.WriteString("\nMODULES\n")
 	for _, m := range r.Modules {
 		name := m.Name
@@ -272,4 +302,16 @@ func ContentType(format string) (mime, ext string, ok bool) {
 		return "text/csv", "maltego.csv", true
 	}
 	return "", "", false
+}
+
+// noteTitle turns a note key ("identity", "finding:people|ORCID|url") into
+// something readable.
+func noteTitle(k string) string {
+	switch {
+	case k == "identity":
+		return "About the best match"
+	case strings.HasPrefix(k, "finding:"):
+		return "Finding: " + strings.ReplaceAll(strings.TrimPrefix(k, "finding:"), "|", " / ")
+	}
+	return k
 }

@@ -126,6 +126,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	mux.HandleFunc("POST /api/scans/{id}/cancel", s.handleCancel)
 	mux.HandleFunc("GET /api/scans/{id}/events", s.handleEvents)
 	mux.HandleFunc("GET /api/scans/{id}/export", s.handleExport)
+	mux.HandleFunc("POST /api/scans/{id}/notes", s.handleNotes)
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/cases", s.handleCases)
 	mux.HandleFunc("GET /api/cases/{id}", s.handleCaseGet)

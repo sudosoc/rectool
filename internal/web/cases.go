@@ -34,23 +34,35 @@ func DefaultCaseDir() string {
 	return ""
 }
 
-func (c *caseStore) save(rep *models.Report) {
+func (c *caseStore) save(rep *models.Report) string {
 	if c == nil || c.dir == "" {
-		return
+		return ""
 	}
 	if err := os.MkdirAll(c.dir, 0o700); err != nil {
 		fmt.Fprintln(os.Stderr, "[!] cases:", err)
-		return
+		return ""
 	}
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
 	id := rep.StartedAt.Format("20060102_150405") + "_" + hex.EncodeToString(b)
 	data, err := json.Marshal(rep)
 	if err != nil {
-		return
+		return ""
 	}
 	if err := os.WriteFile(filepath.Join(c.dir, id+".json"), data, 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "[!] cases:", err)
+		return ""
+	}
+	return id
+}
+
+// update rewrites an existing case (used when notes change).
+func (c *caseStore) update(id string, rep *models.Report) {
+	if c == nil || c.dir == "" || !caseIDRe.MatchString(id) {
+		return
+	}
+	if data, err := json.Marshal(rep); err == nil {
+		_ = os.WriteFile(filepath.Join(c.dir, id+".json"), data, 0o600)
 	}
 }
 
@@ -149,6 +161,43 @@ func (s *Server) handleCaseDelete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// handleNotes stores one analyst note on a finished scan and rewrites the saved
+// case, so notes travel with the case and appear in the reports.
+func (s *Server) handleNotes(w http.ResponseWriter, r *http.Request) {
+	sc, ok := s.mgr.get(r.PathValue("id"))
+	if !ok {
+		writeErr(w, http.StatusNotFound, "no such scan")
+		return
+	}
+	var req struct {
+		Key  string `json:"key"`
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&req); err != nil || req.Key == "" || len(req.Key) > 300 || len(req.Text) > 4000 {
+		writeErr(w, http.StatusBadRequest, "bad note")
+		return
+	}
+	sc.mu.Lock()
+	rep := sc.report
+	if rep == nil {
+		sc.mu.Unlock()
+		writeErr(w, http.StatusConflict, "notes can be added when the scan has finished")
+		return
+	}
+	if rep.Notes == nil {
+		rep.Notes = map[string]string{}
+	}
+	if strings.TrimSpace(req.Text) == "" {
+		delete(rep.Notes, req.Key)
+	} else if len(rep.Notes) < 300 || rep.Notes[req.Key] != "" {
+		rep.Notes[req.Key] = req.Text
+	}
+	id := sc.caseID
+	sc.mu.Unlock()
+	s.cases.update(id, rep)
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 // handleCaseOpen re-creates a finished scan from a saved case so the whole UI
 // (tabs, exports, pictures) works on it exactly as on a live scan.
 func (s *Server) handleCaseOpen(w http.ResponseWriter, r *http.Request) {
@@ -158,6 +207,7 @@ func (s *Server) handleCaseOpen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sc := s.mgr.restore(rep)
+	sc.caseID = r.PathValue("id")
 	writeJSON(w, http.StatusOK, map[string]string{"id": sc.ID})
 }
 

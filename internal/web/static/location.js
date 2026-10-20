@@ -222,6 +222,7 @@
         el("p", {}, el("b", { text: tz.label }), ` — confidence ${Math.round(tz.confidence * 100)}%, from ${tz.events} public events (${(tz.sources || []).join(", ")})`),
         el("p", { class: "muted", text: "Typical places: " + ((tz.regions || []).join("; ") || "—") }),
         hoursChart(tz),
+        heatmap(tz) || document.createTextNode(""),
         el("p", { class: "hint-line", text: "Bars = events per hour (UTC). Highlighted bars = the quiet window assumed to be local night (00:00–07:00). Shift work, automation, bots and travel weaken this signal." }));
       root.append(p);
     }
@@ -230,16 +231,91 @@
 
   RT.timelinePanel = function timelinePanel(tl) {
     const p = el("div", { class: "panel" }, el("h3", { text: `Timeline (${tl.length})` }),
-      el("p", { class: "hint-line", text: "Dated facts from the accounts, archives and files found, oldest first." }));
-    const list = el("div", { class: "timeline" });
+      el("p", { class: "hint-line", text: "Oldest to newest. Dots that fall close together are grouped; click one to read what happened there." }));
+    const ms = (d) => Date.parse(d + "T00:00:00Z");
+    const t0 = ms(tl[0].date);
+    const span = Math.max(ms(tl[tl.length - 1].date) - t0, 30 * 86400000);
+    const W = Math.max(680, Math.min(2600, tl.length * 46));
+    const axis = el("div", { class: "htl" });
+    axis.style.width = W + "px";
+    const xOf = (t) => ((t - t0) / span) * (W - 24) + 12;
+    // year ticks (or first / last date for short spans)
+    const y0 = new Date(t0).getUTCFullYear(), y1 = new Date(t0 + span).getUTCFullYear();
+    const tick = (x, label) => { const t = el("div", { class: "tick" }, el("span", { text: label })); t.style.left = x + "px"; axis.append(t); };
+    if (y1 - y0 >= 1) { for (let y = y0 + 1; y <= y1; y++) tick(xOf(Date.UTC(y, 0, 1)), String(y)); tick(xOf(t0), tl[0].date.slice(0, 7)); }
+    else { tick(xOf(t0), tl[0].date); tick(xOf(t0 + span), tl[tl.length - 1].date); }
+    // cluster events whose dots would overlap
+    const groups = [];
     for (const e of tl) {
-      const href = RT.safeHref(e.url);
-      list.append(el("div", { class: "tl-row" }, el("span", { class: "tl-date", text: e.date }), el("span", { class: "tl-dot" }),
-        el("span", {}, el("b", { text: e.event }), document.createTextNode(" · "), href ? el("a", { href, target: "_blank", rel: "noopener noreferrer", text: e.source }) : document.createTextNode(e.source))));
+      const x = xOf(ms(e.date));
+      const g = groups[groups.length - 1];
+      if (g && x - g.x < 16) g.items.push(e); else groups.push({ x, items: [e] });
     }
-    p.append(list);
+    const list = el("div", { class: "htl-list" });
+    const show = (g, dot) => {
+      axis.querySelectorAll(".ev.sel").forEach((d) => d.classList.remove("sel"));
+      dot.classList.add("sel");
+      list.replaceChildren();
+      for (const e of g.items) {
+        const href = RT.safeHref(e.url);
+        list.append(el("div", { class: "tl-row" }, el("span", { class: "tl-date", text: e.date }),
+          el("span", {}, el("b", { text: e.event }), document.createTextNode(" · "), href ? el("a", { href, target: "_blank", rel: "noopener noreferrer", text: e.source }) : document.createTextNode(e.source))));
+      }
+    };
+    groups.forEach((g, i) => {
+      const press = g.items.some((e) => /press/.test(e.event));
+      const dot = el("button", { type: "button", class: "ev" + (g.items.length > 1 ? " big" : "") + (press ? " n" : ""), title: g.items.length > 1 ? `${g.items.length} events around ${g.items[0].date}` : `${g.items[0].date} · ${g.items[0].event}`, "aria-label": g.items[0].date + " " + g.items[0].event });
+      dot.style.left = g.x + "px";
+      // alternate dots above/below the axis label row is unnecessary: the list below carries the text
+      dot.addEventListener("click", () => show(g, dot));
+      axis.append(dot);
+      if (i === groups.length - 1) setTimeout(() => dot.click(), 0);
+    });
+    axis.style.height = "46px";
+    axis.style.marginBottom = "26px";
+    p.append(el("div", { class: "htl-wrap" }, axis), list);
     return p;
   };
+
+  // weekday x hour heatmap of public activity, in the person's estimated local time or UTC
+  function heatmap(tz) {
+    const g = tz.grid_utc;
+    if (!g || !g.some((row) => row && row.some((v) => v > 0))) return null;
+    let local = true;
+    const wrap = el("div", {});
+    const ctl = el("div", { class: "heat-ctl" });
+    const btn = el("button", { type: "button", class: "ghost small" });
+    ctl.append(btn, el("span", { class: "hint-line", text: "Darker = more public activity in that hour." }));
+    const grid = el("div", { class: "heat" });
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    function draw() {
+      btn.textContent = local ? `Showing local time (${tz.label}) — switch to UTC` : "Showing UTC — switch to local time";
+      const off = local ? tz.utc_offset : 0;
+      const m = Array.from({ length: 7 }, () => new Array(24).fill(0));
+      for (let d = 0; d < 7; d++) for (let h = 0; h < 24; h++) {
+        const v = (g[d] || [])[h] || 0;
+        if (!v) continue;
+        const hl = h + off;
+        const dd = (((d + Math.floor(hl / 24)) % 7) + 7) % 7, hh = ((hl % 24) + 24) % 24;
+        m[dd][hh] += v;
+      }
+      const max = Math.max(1, ...m.flat());
+      grid.replaceChildren(el("div", {}));
+      for (let h = 0; h < 24; h++) grid.append(el("div", { class: "hh", text: h % 3 === 0 ? String(h) : "" }));
+      m.forEach((row, d) => {
+        grid.append(el("div", { class: "hl", text: days[d] }));
+        row.forEach((v, h) => {
+          const c = el("div", { class: "hc", title: `${days[d]} ${String(h).padStart(2, "0")}:00 · ${v} events` });
+          if (v) c.style.background = `color-mix(in srgb, var(--accent) ${Math.max(12, Math.round((v / max) * 100))}%, var(--panel2))`;
+          grid.append(c);
+        });
+      });
+    }
+    btn.addEventListener("click", () => { local = !local; draw(); });
+    draw();
+    wrap.append(ctl, grid);
+    return wrap;
+  }
 
   RT.views.location = location;
   window.addEventListener("resize", () => { if (RT.tab === "location") RT.scheduleRender(true); });

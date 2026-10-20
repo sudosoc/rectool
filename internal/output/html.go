@@ -45,6 +45,7 @@ type htmlData struct {
 	Duration   string
 	Target     [][2]string
 	Summary    []string
+	Notes      [][2]string
 	Identities []htmlIdentity
 	Gallery    []htmlPhoto
 	Categories []htmlCategory
@@ -144,6 +145,14 @@ func writeHTML(w io.Writer, r *models.Report) error {
 	for _, k := range keys {
 		d.Categories = append(d.Categories, htmlCategory{Name: k, Findings: byCat[k]})
 	}
+	nk := make([]string, 0, len(r.Notes))
+	for k := range r.Notes {
+		nk = append(nk, k)
+	}
+	sort.Strings(nk)
+	for _, k := range nk {
+		d.Notes = append(d.Notes, [2]string{noteTitle(k), r.Notes[k]})
+	}
 	d.Failures = r.Failures
 	if len(d.Failures) > 80 {
 		d.MoreFail = len(d.Failures) - 80
@@ -231,6 +240,8 @@ a{color:var(--acc);word-break:break-all}code{font-size:12px;word-break:break-all
 {{if .URL}}<div><a href="{{.URL}}">{{.URL}}</a></div>{{end}}
 {{range .Lines}}<div class="src">{{.}}</div>{{end}}</div>{{end}}
 {{end}}
+
+{{if .Notes}}<h2>Analyst notes</h2>{{range .Notes}}<div class="card"><b>{{index . 0}}</b><div style="white-space:pre-wrap">{{index . 1}}</div></div>{{end}}{{end}}
 
 {{if .R.ManualLeads}}<h2>Manual leads</h2><div class="card"><div class="mut">Sources that need a login, CAPTCHA or payment. rectool does not bypass those; open them yourself.</div>
 {{range .R.ManualLeads}}<div class="fact"><b>{{.Group}}</b> · {{if safe .URL}}<a href="{{safe .URL}}">{{.Label}}</a>{{else}}{{.Label}}{{end}} <span class="src">{{.Why}}</span></div>{{end}}</div>{{end}}

@@ -23,6 +23,14 @@
   let nodes = [], edges = [], byId = new Map();
   let view = { x: 0, y: 0, k: 1 };
   let alpha = 1, raf = null, hover = null, selected = null, drag = null, showWeak = true;
+  const hiddenTypes = new Set();
+  let colorBy = "type", findText = "", typesPresent = new Set();
+  const PALETTE = ["#35d08a", "#4cc9f0", "#f472b6", "#f2b84b", "#a78bfa", "#fb923c", "#60a5fa", "#facc15", "#34d399", "#f87171", "#94a3b8", "#22d3ee"];
+  const collectorOf = (n) => (n.source || "input").split(/[:/]/)[0].trim() || "input";
+  const colorOf = (n) => {
+    if (colorBy === "collector" && n.type !== "subject") { const c = collectorOf(n); let h = 0; for (const ch of c) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; }
+    return COLORS[n.type] || "#94a3b8";
+  };
   let textColor = "#dfe7ef", lineColor = "#3a4658";
 
   const key = (type, value) => type + ":" + String(value).toLowerCase();
@@ -75,6 +83,12 @@
       a.deg++; b.deg++;
     }
     let list = [...nm.values()];
+    typesPresent = new Set(list.map((n) => n.type));
+    if (hiddenTypes.size) {
+      const keep = new Set(list.filter((n) => n.type === "subject" || !hiddenTypes.has(n.type)).map((n) => n.id));
+      list = list.filter((n) => keep.has(n.id));
+      ed = ed.filter((e) => keep.has(e.a.id) && keep.has(e.b.id));
+    }
     if (!showWeak) {
       const keep = new Set(list.filter((n) => n.strong || n.input).map((n) => n.id));
       list = list.filter((n) => keep.has(n.id));
@@ -106,12 +120,28 @@
   function legend() {
     const box = $("graphLegend");
     box.replaceChildren();
-    const present = new Set(nodes.map((n) => n.type));
-    for (const [type, color] of Object.entries(COLORS)) {
-      if (!present.has(type)) continue;
-      const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = color;
-      const k = document.createElement("span"); k.className = "k"; k.append(sw, document.createTextNode(type));
-      box.append(k);
+    if (colorBy === "collector") {
+      const seen = new Set();
+      for (const n of nodes) {
+        if (n.type === "subject") continue;
+        const c = collectorOf(n);
+        if (seen.has(c)) continue;
+        seen.add(c);
+        const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = colorOf(n);
+        const k = document.createElement("span"); k.className = "k"; k.append(sw, document.createTextNode(c));
+        box.append(k);
+      }
+    } else {
+      for (const [type, color] of Object.entries(COLORS)) {
+        if (!typesPresent.has(type) && !hiddenTypes.has(type)) continue;
+        if (type === "subject") continue;
+        const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = color;
+        const k = document.createElement("button"); k.type = "button"; k.className = "k" + (hiddenTypes.has(type) ? " off" : "");
+        k.title = hiddenTypes.has(type) ? "Show " + type : "Hide " + type;
+        k.append(sw, document.createTextNode(" " + type));
+        k.addEventListener("click", () => { hiddenTypes.has(type) ? hiddenTypes.delete(type) : hiddenTypes.add(type); if (RT.S) { build(); kick(0.7); } });
+        box.append(k);
+      }
     }
     const info = document.createElement("span"); info.className = "k";
     info.textContent = `${nodes.length} nodes · ${edges.length} links` + (nodes.length >= MAX_NODES ? " (strongest shown)" : "");
@@ -170,31 +200,57 @@
     ctx.translate(view.x, view.y); ctx.scale(view.k, view.k);
 
     ctx.lineWidth = 1 / view.k;
+    const focus = selected || null;
+    const near = new Set();
+    if (focus) { near.add(focus); for (const e of edges) { if (e.a === focus) near.add(e.b); if (e.b === focus) near.add(e.a); } }
+    const q = findText;
     for (const e of edges) {
       const hot = hover && (e.a === hover || e.b === hover);
       ctx.strokeStyle = hot ? "#35d08a" : lineColor;
-      ctx.globalAlpha = hot ? 0.95 : 0.55;
+      ctx.globalAlpha = hot ? 0.95 : focus ? (e.a === focus || e.b === focus ? 0.9 : 0.1) : 0.55;
       ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
     }
     ctx.globalAlpha = 1;
     for (const n of nodes) {
       const r = radius(n);
-      ctx.fillStyle = COLORS[n.type] || "#94a3b8";
-      ctx.globalAlpha = n.strong || n.input ? 1 : 0.55;
+      ctx.fillStyle = colorOf(n);
+      ctx.globalAlpha = focus && !near.has(n) ? 0.15 : n.strong || n.input ? 1 : 0.55;
       ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
       if (n.strong && !n.input) { ctx.strokeStyle = COLORS[n.type] || "#94a3b8"; ctx.lineWidth = 1.4 / view.k; ctx.beginPath(); ctx.arc(n.x, n.y, r + 3, 0, Math.PI * 2); ctx.stroke(); }
+      if (q && String(n.value || n.label || "").toLowerCase().includes(q)) { ctx.strokeStyle = "#f2b84b"; ctx.lineWidth = 2.5 / view.k; ctx.beginPath(); ctx.arc(n.x, n.y, r + 8, 0, Math.PI * 2); ctx.stroke(); }
       if (n === selected || n === hover) { ctx.strokeStyle = textColor; ctx.lineWidth = 2 / view.k; ctx.beginPath(); ctx.arc(n.x, n.y, r + 5, 0, Math.PI * 2); ctx.stroke(); }
     }
     ctx.font = `${11 / Math.max(0.7, Math.min(1.4, view.k))}px ui-monospace, Menlo, Consolas, monospace`;
     ctx.fillStyle = textColor; ctx.textBaseline = "middle";
     for (const n of nodes) {
-      const show = n.input || n === hover || n === selected || (view.k > 0.9 && (n.strong || n.deg >= 3)) || view.k > 1.6;
+      const show = n.input || n === hover || n === selected || near.has(n) && focus || (q && String(n.value || "").toLowerCase().includes(q)) || (view.k > 0.9 && (n.strong || n.deg >= 3)) || view.k > 1.6;
       if (!show) continue;
       const label = n.type === "subject" ? n.label : n.value;
       ctx.fillText(label.length > 34 ? label.slice(0, 33) + "…" : label, n.x + radius(n) + 6, n.y);
     }
     ctx.restore();
+  }
+
+  // list what a node is connected to, inside the details drawer
+  function neighbours(n) {
+    const body = $("drawerBody");
+    const list = [];
+    for (const e of edges) { if (e.a === n) list.push([e.b, e.label]); else if (e.b === n) list.push([e.a, e.label]); }
+    if (!list.length) return;
+    const sec = document.createElement("div"); sec.className = "sec";
+    const h = document.createElement("h4"); h.textContent = `Connected to (${list.length})`; sec.append(h);
+    const chips = document.createElement("div"); chips.className = "facts";
+    for (const [m, via] of list.slice(0, 40)) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip";
+      const k = document.createElement("span"); k.className = "k"; k.textContent = m.type;
+      const v = document.createElement("span"); v.textContent = (m.type === "subject" ? m.label : m.value).slice(0, 48);
+      b.title = "via " + via; b.append(k, v);
+      b.addEventListener("click", () => { selected = m; draw(); if (m.type !== "subject") { RT.showEntity({ type: m.type, value: m.value, strong: m.strong, source: m.source }); neighbours(m); } });
+      chips.append(b);
+    }
+    sec.append(chips);
+    body.append(sec);
   }
 
   // ------------------------------------------------------------ interaction
@@ -236,7 +292,10 @@
     } else tip.hidden = true;
   });
   canvas.addEventListener("pointerup", () => {
-    if (drag && drag.n && !drag.moved) { selected = drag.n; if (drag.n.type !== "subject") RT.showEntity({ type: drag.n.type, value: drag.n.value, strong: drag.n.strong, source: drag.n.source }); }
+    if (drag && drag.n && !drag.moved) {
+      selected = drag.n;
+      if (drag.n.type !== "subject") { RT.showEntity({ type: drag.n.type, value: drag.n.value, strong: drag.n.strong, source: drag.n.source }); neighbours(drag.n); }
+    } else if (drag && !drag.n && !drag.moved) selected = null;
     canvas.classList.remove("drag");
     drag = null; draw();
   });
@@ -249,6 +308,15 @@
     view.x = px - ((px - view.x) / view.k) * k; view.y = py - ((py - view.y) / view.k) * k; view.k = k;
     draw();
   }, { passive: false });
+
+  const bar = document.querySelector(".graph-bar");
+  const sel = document.createElement("select");
+  for (const [v, l] of [["type", "Colour by type"], ["collector", "Colour by collector"]]) { const o = document.createElement("option"); o.value = v; o.textContent = l; sel.append(o); }
+  sel.addEventListener("change", () => { colorBy = sel.value; legend(); draw(); });
+  const find = document.createElement("input"); find.type = "search"; find.placeholder = "find a node…"; find.style.width = "150px";
+  find.addEventListener("input", () => { findText = find.value.trim().toLowerCase(); draw(); });
+  bar.insertBefore(sel, $("graphWeak").closest("label"));
+  bar.insertBefore(find, $("graphWeak").closest("label"));
 
   $("graphWeak").addEventListener("change", (e) => { showWeak = e.target.checked; if (RT.S) { build(); kick(0.7); } });
   $("graphReset").addEventListener("click", () => { view = { x: 0, y: 0, k: 1 }; nodes.forEach((n) => { if (n.type !== "subject") n.fixed = false; }); kick(0.9); });

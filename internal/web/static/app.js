@@ -102,19 +102,33 @@ RT.MODULE_NEEDS = {
 RT.MODULE_ORDER = ["social", "profiles", "footprint", "phone", "domain", "ip", "asn", "company", "people", "images", "activity", "breach", "mentions", "devtrace", "docmeta", "records", "crypto", "dorks", "syswrap"];
 
 RT.buildForm = function buildForm(info) {
-  const fields = $("fields");
-  fields.replaceChildren();
+  const root = $("fields");
+  root.replaceChildren();
+  // collapsible groups, remembering which are open and showing how many fields are filled
+  const collapsible = (title) => {
+    const det = el("details", { class: "fgroup" });
+    det.open = RT.store.get("grp_" + title, "1") === "1";
+    const filled = el("span", { class: "filled" });
+    det.append(el("summary", {}, document.createTextNode(title), filled));
+    det.addEventListener("toggle", () => RT.store.set("grp_" + title, det.open ? "1" : "0"));
+    det.addEventListener("input", () => {
+      const n = [...det.querySelectorAll("input:not([type=checkbox]), textarea")].filter((i) => i.value.trim()).length;
+      filled.textContent = n ? " · " + n + " filled" : "";
+    });
+    root.append(det);
+    return det;
+  };
   for (const g of RT.FIELDS) {
-    fields.append(el("div", { class: "group", text: g.group }));
+    const det = collapsible(g.group);
     for (const f of g.items) {
       const input = el("input", { name: f.name, maxlength: "200", placeholder: f.ph, spellcheck: "false", autocomplete: "off", class: f.mono ? "mono-in" : "" });
       const label = el("label", { for: "f_" + f.name }, el("span", { text: f.label }), RT.infoBtn(f.name));
       input.id = "f_" + f.name;
-      fields.append(el("div", { class: "field" }, label, input));
+      det.append(el("div", { class: "field" }, label, input));
     }
   }
 
-  fields.append(el("div", { class: "group", text: "Evidence you already have" }));
+  const fields = collapsible("Evidence you already have");
   const notesLabel = el("label", { for: "f_notes" }, el("span", { text: "Paste text (CV, LinkedIn page, bio…)" }), RT.infoBtn("notes"));
   const notes = el("textarea", { name: "notes", id: "f_notes", rows: "3", maxlength: "30000", class: "notes", placeholder: "Optional. Text you copied from a source rectool cannot open." });
   fields.append(el("div", { class: "field" }, notesLabel, notes));
@@ -154,6 +168,27 @@ RT.buildForm = function buildForm(info) {
   }
   $("modAll").addEventListener("click", () => box.querySelectorAll('input[name="mod"]').forEach((c) => (c.checked = true)));
   $("modNone").addEventListener("click", () => box.querySelectorAll('input[name="mod"]').forEach((c) => (c.checked = false)));
+
+  // remember the options and collector selection (never the subject's details)
+  const OPT_NAMES = ["aggressive", "verify", "derive", "no_pivot", "browser"];
+  const form = $("form");
+  const saveOpts = () => {
+    const o = { mods: [...box.querySelectorAll('input[name="mod"]')].filter((c) => c.checked).map((c) => c.value) };
+    for (const n of OPT_NAMES) o[n] = form.elements[n].checked;
+    RT.store.set("opts", JSON.stringify(o));
+  };
+  try {
+    const o = JSON.parse(RT.store.get("opts", "null"));
+    if (o) {
+      for (const n of OPT_NAMES) if (typeof o[n] === "boolean") form.elements[n].checked = o[n];
+      if (Array.isArray(o.mods) && o.mods.length) box.querySelectorAll('input[name="mod"]').forEach((c) => { c.checked = o.mods.includes(c.value); });
+    }
+  } catch (e) { /* ignore a corrupt saved value */ }
+  $("intensity").addEventListener("change", saveOpts);
+  $("options").addEventListener("change", saveOpts);
+  box.addEventListener("change", saveOpts);
+  $("modAll").addEventListener("click", saveOpts);
+  $("modNone").addEventListener("click", saveOpts);
 };
 
 RT.showFormError = function showFormError(msg) {
@@ -192,6 +227,7 @@ RT.bindForm = function bindForm() {
   });
   $("clearBtn").addEventListener("click", () => {
     document.querySelectorAll("#fields input, #fields textarea").forEach((i) => (i.value = ""));
+    document.querySelectorAll("#fields .fgroup .filled").forEach((f) => (f.textContent = ""));
     RT.showFormError("");
   });
 };
@@ -415,6 +451,7 @@ RT.showFinding = function showFinding(f) {
     for (const e of f.entities) chips.append(RT.entityChip(e));
     body.append(el("div", { class: "sec" }, el("h4", { text: "Leads discovered here" }), chips));
   }
+  body.append(el("div", { class: "sec" }, el("h4", { text: "Your notes" }), RT.notes.box("finding:" + [f.module, f.source, f.url || ""].join("|"), "Why this matters, what you verified…")));
   body.append(el("div", { class: "sec" }, el("details", {}, el("summary", { text: "Raw record (JSON)" }), el("pre", { class: "mono", text: JSON.stringify(f, null, 2) }))));
   $("drawer").hidden = false;
 };

@@ -83,7 +83,8 @@ type Report struct {
 	Ambiguity   string            `json:"ambiguity,omitempty"`  // set when several people plausibly match
 	Photos      []Photo           `json:"photos,omitempty"`
 	Timeline    []TimelineEvent   `json:"timeline,omitempty"`
-	Geo         *GeoSummary       `json:"geo,omitempty"` // where the subject probably is, with evidence
+	Notes       map[string]string `json:"notes,omitempty"` // analyst notes keyed by what they are about
+	Geo         *GeoSummary       `json:"geo,omitempty"`   // where the subject probably is, with evidence
 	ManualLeads []Lead            `json:"manual_leads,omitempty"`
 	Failures    []Failure         `json:"failures,omitempty"`
 	Settings    map[string]string `json:"settings,omitempty"` // how the run was configured, for reproducibility
@@ -176,13 +177,14 @@ type GeoCluster struct {
 
 // TZEstimate is a timezone guessed from when the subject is active online.
 type TZEstimate struct {
-	Offset     float64  `json:"utc_offset"`
-	Label      string   `json:"label"` // "UTC+02:00"
-	Confidence float64  `json:"confidence"`
-	Events     int      `json:"events"`
-	Hours      [24]int  `json:"hours_utc"` // activity histogram by UTC hour
-	Regions    []string `json:"regions,omitempty"`
-	Sources    []string `json:"sources,omitempty"`
+	Offset     float64    `json:"utc_offset"`
+	Label      string     `json:"label"` // "UTC+02:00"
+	Confidence float64    `json:"confidence"`
+	Events     int        `json:"events"`
+	Hours      [24]int    `json:"hours_utc"` // activity histogram by UTC hour
+	Grid       [7][24]int `json:"grid_utc"`  // weekday (Mon=0) x UTC hour
+	Regions    []string   `json:"regions,omitempty"`
+	Sources    []string   `json:"sources,omitempty"`
 }
 
 // GeoSummary is the location analysis of a report.

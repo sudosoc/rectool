@@ -71,14 +71,21 @@ func finding(source, handle string, ts []time.Time) (models.Finding, bool) {
 		return models.Finding{}, false
 	}
 	var hours [24]int
+	var week [168]int
 	for _, t := range ts {
-		hours[t.UTC().Hour()]++
+		u := t.UTC()
+		hours[u.Hour()]++
+		week[((int(u.Weekday())+6)%7)*24+u.Hour()]++
+	}
+	ws := make([]string, 168)
+	for i, v := range week {
+		ws[i] = strconv.Itoa(v)
 	}
 	hs := make([]string, 24)
 	for i, v := range hours {
 		hs[i] = strconv.Itoa(v)
 	}
-	d := map[string]string{"handle": handle, "source": source, "events": strconv.Itoa(len(ts)), "hours_utc": strings.Join(hs, ","),
+	d := map[string]string{"handle": handle, "source": source, "events": strconv.Itoa(len(ts)), "hours_utc": strings.Join(hs, ","), "week_utc": strings.Join(ws, ","),
 		"first event": ts[len(ts)-1].UTC().Format("2006-01-02"), "last event": ts[0].UTC().Format("2006-01-02")}
 	conf := 0.3
 	if off, c, ok := geo.InferOffset(hours); ok {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -61,5 +62,40 @@ func TestCasesRoundTrip(t *testing.T) {
 	}
 	if err := cs.remove(l[0].ID); err != nil || len(cs.list()) != 0 {
 		t.Fatal("remove failed")
+	}
+}
+
+func TestNotesPersistWithCase(t *testing.T) {
+	cs := &caseStore{dir: t.TempDir()}
+	rep := &models.Report{StartedAt: time.Now().UTC(), Target: models.Target{FullName: "Jane Roe"}}
+	id := cs.save(rep)
+	m := newManager(context.Background(), app.Options{}, 1, "")
+	m.cases = cs
+	sc := m.restore(rep)
+	sc.caseID = id
+	s := &Server{mgr: m, cases: cs}
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/scans/{id}/notes", s.handleNotes)
+
+	post := func(body string) int {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest("POST", "/api/scans/"+sc.ID+"/notes", strings.NewReader(body)))
+		return rec.Code
+	}
+	if c := post(`{"key":"identity","text":"verified by phone"}`); c != 200 {
+		t.Fatalf("code %d", c)
+	}
+	got, err := cs.load(id)
+	if err != nil || got.Notes["identity"] != "verified by phone" {
+		t.Fatalf("note not saved with the case: %v %+v", err, got)
+	}
+	if c := post(`{"key":"identity","text":""}`); c != 200 {
+		t.Fatal("clearing failed")
+	}
+	if got, _ = cs.load(id); len(got.Notes) != 0 {
+		t.Fatalf("note not removed: %+v", got.Notes)
+	}
+	if c := post(`{"key":"","text":"x"}`); c != 400 {
+		t.Fatalf("empty key accepted: %d", c)
 	}
 }

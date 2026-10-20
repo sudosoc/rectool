@@ -76,6 +76,7 @@ func (e *Engine) locationStage(ctx context.Context, rep *models.Report) {
 
 	// 2) technical and registry signals tied to the inputs
 	var hours [24]int
+	var grid [7][24]int
 	var tzSources []string
 	events := 0
 	for _, f := range rep.Hits() {
@@ -123,6 +124,12 @@ func (e *Engine) locationStage(ctx context.Context, rep *models.Report) {
 					n, _ := strconv.Atoi(h)
 					hours[i] += n
 					events += n
+				}
+				if wk := strings.Split(d["week_utc"], ","); len(wk) == 168 {
+					for i, v := range wk {
+						n, _ := strconv.Atoi(v)
+						grid[i/24][i%24] += n
+					}
 				}
 				tzSources = append(tzSources, d["source"]+" ("+d["handle"]+")")
 			}
@@ -190,7 +197,7 @@ func (e *Engine) locationStage(ctx context.Context, rep *models.Report) {
 	// timezone from activity hours, checked against the leading place
 	if off, conf, ok := geo.InferOffset(hours); ok {
 		tz := &models.TZEstimate{Offset: off, Label: geo.OffsetLabel(off), Confidence: math.Round(conf*100) / 100, Events: events,
-			Hours: hours, Regions: geo.OffsetRegions(off), Sources: tzSources}
+			Hours: hours, Grid: grid, Regions: geo.OffsetRegions(off), Sources: tzSources}
 		sum.TZ = tz
 		if len(sum.Clusters) > 0 {
 			top := sum.Clusters[0]
