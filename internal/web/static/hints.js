@@ -112,7 +112,7 @@ RT.HINTS = {
     ar: "بيدوّر على صور الشخص: صور اليوزرنيم على حوالي 18 خدمة (عن طريق unavatar.io اللي بيستلم اليوزرنيم) وبحث صور على الويب بالاسم بين علامتين تنصيص، وبيسيب بس النتايج اللي عنوان صفحتها فيه الاسم. النتايج بتظهر كمرشّحين غير مؤكدين: اليوزرنيم أو الاسم الشائع ممكن يكون لحد تاني.",
   },
   "mod:activity": {
-    en: "Needs a username. Reads only the timestamps of the account's public GitHub events and Hacker News posts and finds the quietest stretch of the day, assumed to be local night, to estimate the person's timezone. It feeds the Location tab. Weak for shift workers, bots and travellers.",
+    en: "Needs a username. Reads only the timestamps of the account's public activity on GitHub, Hacker News, Wikipedia, Codeforces, Bluesky, Mastodon and Lichess (only accounts tied to the matched person count) and finds the quietest stretch of the day, assumed to be local night, to estimate the person's timezone. It feeds the Location tab. Weak for shift workers, bots and travellers.",
     ar: "محتاج يوزرنيم. بيقرأ بس توقيتات نشاط الحساب العام على GitHub وHacker News ويدوّر على أهدأ فترة في اليوم (بتتحسب إنها الليل عنده) عشان يقدّر المنطقة الزمنية. بيغذّي تاب Location. ضعيف مع اللي بيشتغل بنظام ورديات أو بوتات أو كتير السفر.",
   },
   "mod:people": {

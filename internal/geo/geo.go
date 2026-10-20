@@ -365,3 +365,27 @@ var offsetRegions = map[int][]string{
 
 // OffsetRegions lists places that observe the given whole-hour offset.
 func OffsetRegions(off float64) []string { return offsetRegions[int(off)] }
+
+var placeCue = regexp.MustCompile(`(?:(?i:based in|based out of|living in|lives in|live in|located in|resident in|resides in|currently in|moved to|from)|📍)\s*:?\s+([\p{Lu}][\p{L}.'’-]+(?:[ ,]+[\p{Lu}][\p{L}.'’-]+){0,3})`)
+
+// PlacesInText pulls place names that follow a location cue ("based in
+// Cairo, Egypt", "lives in Lyon") out of free text such as a bio or CV
+// summary. Results are candidates for geocoding, not facts.
+func PlacesInText(text string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, m := range placeCue.FindAllStringSubmatch(text, -1) {
+		p := strings.Trim(m[1], " ,.")
+		// drop trailing words that are clearly not part of a place
+		for _, stop := range []string{" And", " Where", " With", " Working", " Building", " Enthusiast", " Developer"} {
+			if i := strings.Index(p, stop); i > 0 {
+				p = p[:i]
+			}
+		}
+		if k := strings.ToLower(p); len(p) >= 3 && !seen[k] {
+			seen[k] = true
+			out = append(out, p)
+		}
+	}
+	return out
+}

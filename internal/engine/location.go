@@ -42,10 +42,18 @@ func (e *Engine) locationStage(ctx context.Context, rep *models.Report) {
 	}
 
 	var notes []string
+	// platforms whose account belongs to the best-matching person: only their
+	// activity may inform the timezone (a handle can be someone else's elsewhere)
+	owned := map[string]bool{}
+	haveID := false
 	// 1) the best-matching person's own locations
 	for _, id := range rep.Identities {
 		if id.Weak {
 			continue
+		}
+		haveID = true
+		for _, r := range id.Records {
+			owned[strings.ToLower(r.Platform)] = true
 		}
 		for _, f := range id.Locations {
 			w := geo.Weight("self-declared")
@@ -55,6 +63,10 @@ func (e *Engine) locationStage(ctx context.Context, rep *models.Report) {
 				w = 0.5 // stated by a third-party record only (may be a birthplace or an old address)
 			}
 			add(rawGeo{label: f.Value, kind: "self-declared", sources: f.Sources, weight: w})
+		}
+		// places mentioned in the bio ("based in Lyon"): weaker than a location field
+		for _, p := range geo.PlacesInText(id.Bio) {
+			add(rawGeo{label: p, kind: "self-declared", sources: []string{"bio text"}, weight: 0.45})
 		}
 		if !id.Primary {
 			notes = append(notes, "No single person is a confirmed match; locations are those of the best candidate ("+id.Label+").")
@@ -102,6 +114,9 @@ func (e *Engine) locationStage(ctx context.Context, rep *models.Report) {
 		case f.Module == "activity":
 			if f.Via != "" {
 				continue // a handle that was only discovered, not supplied
+			}
+			if haveID && !owned[strings.ToLower(d["source"])] {
+				continue // account not tied to the matched person
 			}
 			if hs := strings.Split(d["hours_utc"], ","); len(hs) == 24 {
 				for i, h := range hs {

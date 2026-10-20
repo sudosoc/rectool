@@ -59,3 +59,13 @@ func TestClean(t *testing.T) {
 		t.Errorf("got %q", Clean("Cairo, Egypt 🇪🇬"))
 	}
 }
+
+func TestPlacesInText(t *testing.T) {
+	got := PlacesInText("Security engineer. Based in Cairo, Egypt and building tools. Originally from Lyon.")
+	if len(got) != 2 || got[0] != "Cairo, Egypt" || got[1] != "Lyon" {
+		t.Fatalf("got %q", got)
+	}
+	if len(PlacesInText("I work remotely and like coffee")) != 0 {
+		t.Fatal("false positive")
+	}
+}

@@ -7,6 +7,7 @@ package activity
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,7 +27,7 @@ func New() *Scanner { return &Scanner{} }
 
 func (s *Scanner) Name() string { return "activity" }
 func (s *Scanner) Description() string {
-	return "timezone estimate from the hours a username is active on GitHub and Hacker News"
+	return "timezone estimate from the hours a username is active on GitHub, Hacker News, Wikipedia, Codeforces, Bluesky, Mastodon and Lichess"
 }
 func (s *Scanner) CanRun(t models.Target) bool {
 	return strings.TrimSpace(t.Username) != "" || strings.TrimSpace(t.Alias) != ""
@@ -48,7 +49,7 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 	}
 	var wg sync.WaitGroup
 	for _, h := range handles {
-		for name, fn := range map[string]func(context.Context, *httpx.Client, string) []time.Time{"GitHub": githubTimes, "Hacker News": hnTimes} {
+		for name, fn := range sources {
 			h, name, fn := h, name, fn
 			wg.Add(1)
 			if err := d.Pool.Submit(ctx, func() {
@@ -133,4 +134,118 @@ func getJSON(ctx context.Context, c *httpx.Client, u string, out any) bool {
 		return false
 	}
 	return json.Unmarshal(resp.Body, out) == nil
+}
+
+// sources lists every place whose public timestamps are read.
+var sources = map[string]func(context.Context, *httpx.Client, string) []time.Time{
+	"GitHub":      githubTimes,
+	"Hacker News": hnTimes,
+	"Wikipedia":   wikipediaTimes,
+	"Codeforces":  codeforcesTimes,
+	"Bluesky":     blueskyTimes,
+	"Mastodon":    mastodonTimes,
+	"Lichess":     lichessTimes,
+}
+
+func wikipediaTimes(ctx context.Context, c *httpx.Client, h string) []time.Time {
+	var r struct {
+		Query struct {
+			Contribs []struct {
+				Timestamp time.Time `json:"timestamp"`
+			} `json:"usercontribs"`
+		} `json:"query"`
+	}
+	if !getJSON(ctx, c, "https://en.wikipedia.org/w/api.php?action=query&list=usercontribs&format=json&uclimit=500&ucprop=timestamp&ucuser="+url.QueryEscape(h), &r) {
+		return nil
+	}
+	var out []time.Time
+	for _, x := range r.Query.Contribs {
+		out = append(out, x.Timestamp)
+	}
+	return out
+}
+
+func codeforcesTimes(ctx context.Context, c *httpx.Client, h string) []time.Time {
+	var r struct {
+		Result []struct {
+			At int64 `json:"creationTimeSeconds"`
+		} `json:"result"`
+	}
+	if !getJSON(ctx, c, "https://codeforces.com/api/user.status?from=1&count=300&handle="+url.QueryEscape(h), &r) {
+		return nil
+	}
+	var out []time.Time
+	for _, x := range r.Result {
+		out = append(out, time.Unix(x.At, 0))
+	}
+	return out
+}
+
+func blueskyTimes(ctx context.Context, c *httpx.Client, h string) []time.Time {
+	if !strings.Contains(h, ".") {
+		h += ".bsky.social"
+	}
+	var r struct {
+		Feed []struct {
+			Post struct {
+				Record struct {
+					Created time.Time `json:"createdAt"`
+				} `json:"record"`
+			} `json:"post"`
+			Reason any `json:"reason"` // set for reposts, whose time is not the author's own
+		} `json:"feed"`
+	}
+	if !getJSON(ctx, c, "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?limit=100&filter=posts_with_replies&actor="+url.QueryEscape(h), &r) {
+		return nil
+	}
+	var out []time.Time
+	for _, x := range r.Feed {
+		if x.Reason == nil {
+			out = append(out, x.Post.Record.Created)
+		}
+	}
+	return out
+}
+
+var mastodonHosts = []string{"mastodon.social", "mstdn.social", "fosstodon.org", "infosec.exchange", "hachyderm.io", "mas.to"}
+
+func mastodonTimes(ctx context.Context, c *httpx.Client, h string) []time.Time {
+	for _, host := range mastodonHosts {
+		var acct struct {
+			ID string `json:"id"`
+		}
+		if !getJSON(ctx, c, "https://"+host+"/api/v1/accounts/lookup?acct="+url.QueryEscape(h), &acct) || acct.ID == "" {
+			continue
+		}
+		var st []struct {
+			Created time.Time `json:"created_at"`
+		}
+		if !getJSON(ctx, c, "https://"+host+"/api/v1/accounts/"+acct.ID+"/statuses?limit=40&exclude_reblogs=true", &st) {
+			continue
+		}
+		var out []time.Time
+		for _, x := range st {
+			out = append(out, x.Created)
+		}
+		return out
+	}
+	return nil
+}
+
+func lichessTimes(ctx context.Context, c *httpx.Client, h string) []time.Time {
+	resp, err := c.Do(ctx, httpx.Request{URL: "https://lichess.org/api/games/user/" + url.PathEscape(h) + "?max=300&moves=false&tags=false",
+		Timeout: 30 * time.Second, MaxBody: 6 << 20, Headers: map[string]string{"Accept": "application/x-ndjson"}})
+	if err != nil || resp.StatusCode != 200 {
+		return nil
+	}
+	var out []time.Time
+	for _, line := range strings.Split(string(resp.Body), "\n") {
+		var g struct {
+			At int64 `json:"createdAt"`
+		}
+		if json.Unmarshal([]byte(line), &g) == nil && g.At > 0 {
+			out = append(out, time.UnixMilli(g.At))
+		}
+	}
+	return out
 }
