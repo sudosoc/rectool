@@ -119,6 +119,18 @@ RT.HINTS = {
     en: "Needs an e-mail. Looks the address up in the public XposedOrNot breach index and lists which leaks it appears in, the years and the kinds of data exposed (never the data itself). Useful to see how long an address has been in use and which services the person had accounts with.",
     ar: "محتاج إيميل. بيدوّر على الإيميل في فهرس XposedOrNot العام للتسريبات وبيعرض أي تسريبات ظهر فيها وسنواتها وأنواع البيانات المتسرّبة (مش البيانات نفسها). مفيد تعرف الإيميل شغال من إمتى وكان له حسابات على أنهي خدمات.",
   },
+  "mod:devtrace": {
+    en: "Needs a username or e-mail. Reads what developers leave in public without noticing: the names and e-mails in an account's recent public commits, the e-mails on its GPG keys (GitHub marks which are verified), public organisations, main languages and topics, npm / RubyGems maintainer details, and PGP keyserver identities for an e-mail. GitHub allows only 60 anonymous requests per hour.",
+    ar: "محتاج يوزرنيم أو إيميل. بيقرأ اللي المطورين بيسيبوه علني من غير ما ياخدوا بالهم: أسماء وإيميلات الـcommits العامة الأخيرة، وإيميلات مفاتيح GPG (وGitHub بيعلّم المؤكد منها)، والمنظمات العامة واللغات والمواضيع، وبيانات مشرفي حزم npm وRubyGems، وهويات مفاتيح PGP على سيرفرات المفاتيح. GitHub بيسمح بـ60 طلب بس في الساعة من غير تسجيل.",
+  },
+  "mod:docmeta": {
+    en: "Needs a domain (or document links). Downloads up to 12 PDF / Word / Excel / PowerPoint / OpenDocument files the site itself links to (homepage and sitemap) and reads their hidden metadata: author, last person who saved it, organisation, software and dates. Often reveals real staff names and login names. Only the metadata is read, nothing is stored.",
+    ar: "محتاج دومين (أو روابط ملفات). بينزّل لحد 12 ملف PDF/Word/Excel/PowerPoint/OpenDocument الموقع نفسه حاطط لينكاتها (الصفحة الرئيسية وsitemap) ويقرأ الميتاداتا المخفية: المؤلف وآخر واحد حفظ الملف والمؤسسة والبرنامج والتواريخ. كتير بتكشف أسماء موظفين حقيقية وأسماء دخولهم. بيقرأ الميتاداتا بس ومفيش حاجة بتتخزن.",
+  },
+  "mod:records": {
+    en: "Needs a full name, a domain or an IP. Searches SEC EDGAR filings that name the person (officers, directors and big shareholders of US-listed companies, with the companies and dates) and urlscan.io's public scan history of a domain or IP (past IP addresses, hosting networks, servers, other domains on the same IP).",
+    ar: "محتاج اسم كامل أو دومين أو IP. بيدوّر في ملفات SEC EDGAR اللي فيها اسم الشخص (مسؤولين ومديرين وكبار المساهمين في شركات أمريكية مدرجة، مع الشركات والتواريخ) وفي تاريخ urlscan.io العام للدومين أو الـIP (عناوين IP سابقة وشبكات الاستضافة والسيرفرات ودومينات تانية على نفس الـIP).",
+  },
   "mod:people": {
     en: "Needs a full name (2+ words), a LinkedIn link or pasted text. Finds candidate profiles (LinkedIn public view when LinkedIn allows it, ORCID, Wikidata, OpenAlex, GitHub, CV documents) and keeps different people with the same name apart.",
     ar: "محتاج اسم كامل (كلمتين أو أكتر) أو رابط LinkedIn أو نص ملصوق. بيجيب بروفايلات مرشحة (LinkedIn العام لو سمح، وORCID وWikidata وOpenAlex وGitHub وملفات CV) وبيفصل الناس اللي بنفس الاسم عن بعض.",

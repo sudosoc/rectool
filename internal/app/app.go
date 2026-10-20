@@ -16,6 +16,8 @@ import (
 	"github.com/sudosoc/rectool/internal/modules/breach"
 	"github.com/sudosoc/rectool/internal/modules/company"
 	"github.com/sudosoc/rectool/internal/modules/crypto"
+	"github.com/sudosoc/rectool/internal/modules/devtrace"
+	"github.com/sudosoc/rectool/internal/modules/docmeta"
 	"github.com/sudosoc/rectool/internal/modules/domain"
 	"github.com/sudosoc/rectool/internal/modules/dorks"
 	"github.com/sudosoc/rectool/internal/modules/footprint"
@@ -24,6 +26,7 @@ import (
 	"github.com/sudosoc/rectool/internal/modules/people"
 	"github.com/sudosoc/rectool/internal/modules/phone"
 	"github.com/sudosoc/rectool/internal/modules/profiles"
+	"github.com/sudosoc/rectool/internal/modules/records"
 	"github.com/sudosoc/rectool/internal/modules/social"
 	"github.com/sudosoc/rectool/internal/modules/syswrap"
 )
@@ -142,6 +145,9 @@ func Build(o Options) (*Built, error) {
 	eng.Register(people.New(people.Config{Searcher: searcher, Browser: o.Browser}))
 	eng.Register(images.New())
 	eng.Register(breach.New())
+	eng.Register(devtrace.New())
+	eng.Register(docmeta.New())
+	eng.Register(records.New())
 	eng.Register(activity.New())
 	eng.Register(phone.New())
 	eng.Register(crypto.New())

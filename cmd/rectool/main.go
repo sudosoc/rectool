@@ -38,6 +38,7 @@ func run() int {
 		asnFlag    = flag.String("asn", "", "autonomous system number, e.g. AS13335")
 		wallet     = flag.String("w", "", "Bitcoin or Ethereum wallet address")
 		notesFile  = flag.String("notes-file", "", "file with text to treat as a profile: a CV, a LinkedIn page you copied from your own browser, a bio")
+		contact    = flag.String("contact", "", "your contact e-mail, sent only to sec.gov in the User-Agent (the SEC requires it) for the records module")
 		useBrowser = flag.Bool("browser", false, "read LinkedIn public profiles with your installed Chrome/Edge (headless, logged out) when plain HTTP is refused")
 		aggress    = flag.Bool("aggressive", false, "maximum coverage: derive usernames, verify hits, deeper and wider pivoting, more dorks")
 		depth      = flag.Int("pivot-depth", def.PivotDepth, "rounds of following discovered leads")
@@ -81,6 +82,9 @@ func run() int {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *contact != "" {
+		_ = os.Setenv("RECTOOL_CONTACT", *contact)
+	}
 
 	if *showVer {
 		fmt.Println("rectool", engine.Version)
