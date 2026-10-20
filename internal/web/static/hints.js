@@ -107,6 +107,10 @@ RT.HINTS = {
     en: "Needs a company name. Verified website candidates, GLEIF legal records, Wikipedia/Wikidata and GitHub org.",
     ar: "محتاج اسم شركة. مواقع محتملة متحقق منها، وسجلات GLEIF الرسمية، وWikipedia/Wikidata، ومنظمة GitHub.",
   },
+  "mod:images": {
+    en: "Hunts for pictures of the subject: avatars of the username on ~18 services (through the public resolver unavatar.io, which receives the handle) and web image search for the quoted name, keeping only results whose page title contains the name. Results are shown as UNVERIFIED candidates: a handle or a common name can belong to someone else.",
+    ar: "بيدوّر على صور الشخص: صور اليوزرنيم على حوالي 18 خدمة (عن طريق unavatar.io اللي بيستلم اليوزرنيم) وبحث صور على الويب بالاسم بين علامتين تنصيص، وبيسيب بس النتايج اللي عنوان صفحتها فيه الاسم. النتايج بتظهر كمرشّحين غير مؤكدين: اليوزرنيم أو الاسم الشائع ممكن يكون لحد تاني.",
+  },
   "mod:people": {
     en: "Needs a full name (2+ words), a LinkedIn link or pasted text. Finds candidate profiles (LinkedIn public view when LinkedIn allows it, ORCID, Wikidata, OpenAlex, GitHub, CV documents) and keeps different people with the same name apart.",
     ar: "محتاج اسم كامل (كلمتين أو أكتر) أو رابط LinkedIn أو نص ملصوق. بيجيب بروفايلات مرشحة (LinkedIn العام لو سمح، وORCID وWikidata وOpenAlex وGitHub وملفات CV) وبيفصل الناس اللي بنفس الاسم عن بعض.",

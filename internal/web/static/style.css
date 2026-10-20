@@ -238,9 +238,9 @@ td.conf { font: 12px var(--mono); } td.conf.hi { color: var(--accent); } td.conf
 /* ----------------------------------------------------------------- identity */
 .id-banner { border-left: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 9%, transparent); padding: 10px 12px; border-radius: 0 8px 8px 0; margin-bottom: 14px; color: var(--muted); }
 .id-banner b { color: var(--text); }
-.dossier { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; }
+.dossier { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; }
 @media (max-width: 760px) { .dossier { grid-template-columns: 1fr; } }
-.d-photo { width: 150px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--panel2); border: 1px solid var(--line2); display: grid; place-items: center; color: var(--faint); font-size: 40px; cursor: pointer; padding: 0; }
+.d-photo { width: 190px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--panel2); border: 1px solid var(--line2); display: grid; place-items: center; color: var(--faint); font-size: 40px; cursor: pointer; padding: 0; }
 .d-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .d-head h2 { font: 700 20px var(--sans); text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 2px; }
 .d-sub { color: var(--muted); margin-bottom: 8px; }
@@ -265,3 +265,15 @@ td.conf { font: 12px var(--mono); } td.conf.hi { color: var(--accent); } td.conf
 .reasons { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; padding-left: 18px; }
 .conflict { color: var(--amber); font-size: 12.5px; margin-top: 6px; }
 textarea.notes { min-height: 90px; }
+
+.d-left { display: flex; flex-direction: column; gap: 8px; }
+.d-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; width: 190px; }
+.d-thumb { padding: 0; border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; aspect-ratio: 1; background: var(--panel2); cursor: pointer; }
+.d-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dossier h2 { font-size: 22px; letter-spacing: 0; }
+.d-sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.sec-title { margin: 16px 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.tag.cand { color: var(--amber); border-color: var(--amber); }
+.tile.candidate { opacity: .92; border-style: dashed; }
+details.cand-photos { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.cand-photos > summary { font-weight: 600; margin-bottom: 8px; }

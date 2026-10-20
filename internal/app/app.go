@@ -17,6 +17,7 @@ import (
 	"github.com/sudosoc/rectool/internal/modules/domain"
 	"github.com/sudosoc/rectool/internal/modules/dorks"
 	"github.com/sudosoc/rectool/internal/modules/footprint"
+	"github.com/sudosoc/rectool/internal/modules/images"
 	"github.com/sudosoc/rectool/internal/modules/ip"
 	"github.com/sudosoc/rectool/internal/modules/people"
 	"github.com/sudosoc/rectool/internal/modules/phone"
@@ -137,6 +138,7 @@ func Build(o Options) (*Built, error) {
 	eng.Register(profiles.New())
 	eng.Register(company.New())
 	eng.Register(people.New(people.Config{Searcher: searcher, Browser: o.Browser}))
+	eng.Register(images.New())
 	eng.Register(phone.New())
 	eng.Register(crypto.New())
 	eng.Register(asn.New())

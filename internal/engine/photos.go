@@ -14,7 +14,7 @@ import (
 	"github.com/sudosoc/rectool/internal/models"
 )
 
-const maxPhotos = 40
+const maxPhotos = 80
 
 var (
 	imageKeys     = []string{"avatar", "photo", "picture"}

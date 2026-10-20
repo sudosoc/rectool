@@ -82,17 +82,38 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 			cvFinder(ctx, c, search, t, emit)
 		}})
 	}
+	// Other spellings of the name (Mohamed / Muhammad, Arabic / Latin) get the
+	// registry lookups too; identity resolution knows they are the same name.
+	type run struct {
+		job
+		t models.Target
+	}
+	var runs []run
+	for _, j := range jobs {
+		runs = append(runs, run{j, t})
+	}
+	for _, v := range identity.LatinVariants(t.FullName, 2) {
+		tv := t
+		tv.FullName = v
+		for _, j := range jobs {
+			switch j.name {
+			case "orcid", "wikidata", "openalex", "crossref", "wikipedia":
+				runs = append(runs, run{j, tv})
+			}
+		}
+	}
 	var (
 		wg   sync.WaitGroup
 		done atomic.Int64
 	)
-	for _, j := range jobs {
+	for _, r := range runs {
 		wg.Add(1)
+		j, t := r.job, r.t
 		if err := d.Pool.Submit(ctx, func() {
 			defer wg.Done()
 			j.run(ctx, d.HTTP, t, emit)
 			if d.Progress != nil {
-				d.Progress(s.Name(), int(done.Add(1)), len(jobs))
+				d.Progress(s.Name(), int(done.Add(1)), len(runs))
 			}
 		}); err != nil {
 			wg.Done()

@@ -12,6 +12,7 @@ rectool targets Linux (Debian/Ubuntu/Kali, Fedora/RHEL, Arch, openSUSE, Alpine; 
 chmod +x install.sh
 ./install.sh            # system-wide: /usr/local/bin/rectool (uses sudo)
 ./install.sh --user     # no root: ~/.local/bin/rectool
+./update.sh             # later: pull the latest version, rebuild, reinstall (--check only looks)
 ```
 
 The installer installs the OS packages it needs, installs Go 1.22+ if missing (checksum-verified from go.dev), builds a static binary, downloads the 600+ site WhatsMyName list into `share/rectool/` (rectool finds it automatically), and installs the optional tools `whois`, `dig`, `sherlock` and `theHarvester` on a best-effort basis. Options: `--no-deps`, `--no-extras`, `--no-sites`, `--prefix DIR`, `--uninstall`.
@@ -112,6 +113,7 @@ A pasted **profile link** in the domain field (`-d https://x.com/handle`) is rec
 | `domain` | domain | DNS records; SPF/DMARC/DKIM and mail provider; SaaS used (TXT tokens); RDAP registration and contacts; **subdomains** (crt.sh, certspotter, HackerTarget, TLS SANs) resolved and checked for wildcard DNS; website title/tech/security headers/cookies/tracking IDs; emails, phones and social links on the site; robots.txt, sitemap, security.txt; TLS certificate; Internet Archive URLs; stealer-log exposure counts. |
 | `ip` | IP | Reverse DNS, ASN (Team Cymru via DNS), RDAP, geolocation, ports/CVEs already indexed by Shodan InternetDB (no scanning by rectool), co-hosted domains, TLS certificate and web banner. |
 | `company` | company | Candidate domains (verified against the live page; only the best one is followed), Wikipedia, Wikidata, GitHub organisation. |
+| `images` | name or username | Pictures of the subject: avatars of the handle on ~18 services (via unavatar.io) and web image search for the quoted name, filtered to pages whose title has the name. Always shown as unverified candidates, separate from profile photos. |
 | `people` | full name, LinkedIn link or pasted text | Candidate profiles as structured records for identity resolution: LinkedIn public view (when allowed), ORCID, Wikidata, OpenAlex, Crossref authors, Wikipedia, GitHub, Fediverse WebFinger, Wayback snapshots of profile links, CV documents, pasted text. Names match across spellings and scripts (Mohamed / Muhammad / محمد, Bob / Robert). |
 | `footprint` | email or phone | MX, Gravatar profile (name, linked accounts, sites), infostealer exposure (counts/dates only), phone analysis, and web mentions that are verified by fetching each page. |
 | `dorks` | any identifier | Generates dorks from every identifier (site:, filetype:, inurl:, leaks, code, people…) and scrapes Brave / Bing / DuckDuckGo / Google. |

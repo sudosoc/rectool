@@ -429,21 +429,37 @@
       root.append(el("div", { class: "panel muted", text: RT.S.state === "running" ? "No pictures yet…" : "No profile pictures were found. Platforms that need a login (Instagram, Facebook, X, LinkedIn) are listed under Coverage → manual leads." }));
       return;
     }
-    const grid = el("div", { class: "gallery" });
-    for (const p of list) {
+    const isCand = (p) => (p.sources || []).length > 0 && (p.sources || []).every((x) => /^images:/.test(x));
+    const tileFor = (p) => {
       const ph = el("div", { class: "ph", text: "loading…" });
-      const img = el("img", { src: RT.imgSrc(p.url), alt: "profile picture", loading: "lazy" });
+      const img = el("img", { src: RT.imgSrc(p.url), alt: "picture", loading: "lazy" });
       img.addEventListener("load", () => { ph.replaceChildren(img); });
       img.addEventListener("error", () => { ph.textContent = "unavailable"; });
       const cap = el("div", { class: "cap" }, el("div", { class: "src", text: clip((p.sources && p.sources[0]) || "picture", 70).replace(/^[a-z]+: /, "") }));
+      if (isCand(p)) cap.append(el("span", { class: "tag cand", text: "unverified" }));
       if (p.group) cap.append(el("span", { class: "tag same", text: "same picture · group " + p.group }));
       if ((p.sources || []).length > 1) cap.append(el("div", { class: "m", text: "also: " + clip(p.sources.slice(1).join(" · ").replace(/[a-z]+: /g, ""), 80) }));
       if (p.width) cap.append(el("div", { class: "m", text: p.width + "×" + p.height }));
-      const tile = el("button", { type: "button", class: "tile" + (p.group ? " grouped" : "") }, ph, cap);
+      const tile = el("button", { type: "button", class: "tile" + (p.group ? " grouped" : "") + (isCand(p) ? " candidate" : "") }, ph, cap);
       tile.addEventListener("click", () => RT.showPhoto(p));
-      grid.append(tile);
+      return tile;
+    };
+    const sure = list.filter((p) => !isCand(p)), cand = list.filter(isCand);
+    if (sure.length) {
+      root.append(el("h3", { class: "sec-title", text: `From profiles and accounts (${sure.length})` }));
+      const grid = el("div", { class: "gallery" });
+      sure.forEach((p) => grid.append(tileFor(p)));
+      root.append(grid);
     }
-    root.append(grid);
+    if (cand.length) {
+      const det = el("details", { class: "cand-photos", open: !sure.length },
+        el("summary", { text: `Unverified candidates from handle avatars and web image search (${cand.length})` }),
+        el("p", { class: "photo-note", text: "Found by searching the handle on major services or the web for the name. Not proof of identity: the handle may belong to someone else and the name may be shared. Use reverse image search and the surrounding page to confirm." }));
+      const grid = el("div", { class: "gallery" });
+      cand.forEach((p) => grid.append(tileFor(p)));
+      det.append(grid);
+      root.append(det);
+    }
   }
 
   // ---------------------------------------------------------------- identity
@@ -505,7 +521,18 @@
       rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "CV / resume" }), box));
     }
     const right = el("div", {}, head, el("div", { style: "margin-top:10px" }, rows));
-    card.append(el("div", { class: "dossier" }, ph, right));
+    const left = el("div", { class: "d-left" }, ph);
+    const extra = el("div", { class: "d-thumbs" });
+    for (const u of (id.photos || []).slice(1, 9)) {
+      const t = el("button", { type: "button", class: "d-thumb" });
+      const im = el("img", { src: RT.imgSrc(u), alt: "", loading: "lazy" });
+      im.addEventListener("error", () => t.remove());
+      t.append(im);
+      t.addEventListener("click", () => RT.showPhoto({ url: u, sources: id.records.map((r) => r.platform), group: 0 }));
+      extra.append(t);
+    }
+    left.append(extra);
+    card.append(el("div", { class: "dossier" }, left, right));
     for (const c of id.conflicts || []) card.append(el("div", { class: "conflict", text: "⚠ " + c }));
     if ((id.reasons || []).length) {
       const det = el("details", { style: "margin-top:10px" }, el("summary", { text: "Why these sources are treated as the same person" }));

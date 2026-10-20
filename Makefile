@@ -1,12 +1,15 @@
 BIN     := bin/rectool
 LDFLAGS := -s -w
 
-.PHONY: build install test sites linux-amd64 linux-arm64 clean
+.PHONY: update build install test sites linux-amd64 linux-arm64 clean
 
 build:
 	go mod tidy
 	mkdir -p bin
 	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BIN) ./cmd/rectool
+
+update:
+	sh ./update.sh
 
 install:
 	sh ./install.sh
