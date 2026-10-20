@@ -577,6 +577,34 @@
     return c;
   }
 
+  // glance: a one-line count of what is known about the best match, and what
+  // to add to learn more or to separate it from other people.
+  function glance(top, S) {
+    const n = (k) => (top[k] || []).length;
+    const stats = el("div", { class: "kpis" });
+    for (const [k, label] of [["emails", "e-mails"], ["phones", "phones"], ["usernames", "accounts"], ["employers", "employers"], ["education", "schools"], ["websites", "websites"], ["photos", "photos"], ["documents", "CVs"]]) {
+      const c = k === "documents" ? (top.documents || []).length : n(k);
+      stats.append(el("div", { class: "kpi" + (c ? " accent" : ""), style: "cursor:default" }, el("span", { class: "n", text: String(c) }), el("span", { class: "l", text: label })));
+    }
+    const wrap = el("div", { class: "panel" }, el("h3", { text: "At a glance — " + (top.label || "best match") }), stats);
+    const t = S.target || {};
+    const tips = [];
+    const ambiguous = !!S.ambiguity || S.sameName > 1 || !top.primary;
+    if (ambiguous && !t.location) tips.push("Add a location (city or country): it is the quickest way to separate people who share the name.");
+    if (ambiguous && !t.company) tips.push("Add an employer or school: profiles that mention it are ranked first.");
+    if (!t.email && n("emails")) tips.push("Candidate e-mail found: " + top.emails[0].value + ". If it is right, enter it in the E-mail field to confirm the match and pull its Gravatar, GitHub and leak data.");
+    if (!t.username && n("usernames")) tips.push("Account found: " + top.usernames[0].value + ". Enter it as Username to scan ~690 sites for the same handle.");
+    if (!t.domain && n("websites")) tips.push("Website found: " + top.websites[0].value + ". Enter its domain to map DNS, subdomains, technologies and contacts.");
+    if (!n("photos")) tips.push("No verified photo. Check Photos → unverified candidates, or use the reverse image links on any picture.");
+    if (!(t.notes || "").trim() && !(t.links || []).length) tips.push("Open the person's LinkedIn yourself and paste the page text into the Paste text box (e-mail, CV and full history only appear to logged-in viewers).");
+    if (tips.length) {
+      const ul = el("ul", { class: "reasons" });
+      tips.slice(0, 5).forEach((x) => ul.append(el("li", { text: x })));
+      wrap.append(el("h4", { class: "sec-title", text: "To learn more or tighten the match" }), ul);
+    }
+    return wrap;
+  }
+
   function identityView() {
     const S = RT.S, root = $("tab-identity");
     root.replaceChildren();
@@ -597,6 +625,7 @@
       root.append(el("div", { class: "id-banner" }, el("b", { text: `${S.sameName} people share this name. ` }), "The best match is shown first; the others are listed below."));
     }
     const top = ids[0];
+    root.append(glance(top, S));
     if (top.primary) {
       root.append(dossier(top, S));
     } else {

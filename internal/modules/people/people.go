@@ -73,6 +73,8 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 		{"notes", pastedProfile},
 		{"crossref", crossref},
 		{"wikipedia", wikipediaPerson},
+		{"stackoverflow", stackExchange},
+		{"huggingface", huggingFace},
 		{"webfinger", webfinger},
 		{"archive", archived},
 	}
@@ -97,7 +99,7 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 		tv.FullName = v
 		for _, j := range jobs {
 			switch j.name {
-			case "orcid", "wikidata", "openalex", "crossref", "wikipedia":
+			case "orcid", "wikidata", "openalex", "crossref", "wikipedia", "stackoverflow", "huggingface":
 				runs = append(runs, run{j, tv})
 			}
 		}

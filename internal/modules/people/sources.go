@@ -2,7 +2,9 @@ package people
 
 import (
 	"context"
+	"html"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -225,5 +227,80 @@ func archived(ctx context.Context, c *httpx.Client, t models.Target, emit func(m
 		emit(models.Finding{Source: "Internet Archive", Category: "archive", URL: r.Snapshots.Closest.URL, Status: models.StatusFound,
 			Confidence: 0.9, Details: map[string]string{"original": l, "snapshot date": ts,
 				"note": "archived copy of a profile link; useful when the live page was deleted or renamed"}})
+	}
+}
+
+var tagRE = regexp.MustCompile(`<[^>]*>`)
+
+func stripHTML(s string) string {
+	return strings.Join(strings.Fields(html.UnescapeString(tagRE.ReplaceAllString(s, " "))), " ")
+}
+
+// stackExchange searches Stack Overflow members by display name. Members who
+// filled in a location, website or about-me give a real name-to-place link;
+// the network-wide account id identifies the same member on other Stack sites.
+func stackExchange(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding)) {
+	if len(strings.Fields(t.FullName)) < 2 {
+		return
+	}
+	var r struct {
+		Items []struct {
+			DisplayName string `json:"display_name"`
+			Link        string `json:"link"`
+			Location    string `json:"location"`
+			Website     string `json:"website_url"`
+			Image       string `json:"profile_image"`
+			About       string `json:"about_me"`
+			Reputation  int    `json:"reputation"`
+			AccountID   int    `json:"account_id"`
+		} `json:"items"`
+	}
+	if !getJSON(ctx, c, "https://api.stackexchange.com/2.3/users?site=stackoverflow&pagesize=10&order=desc&sort=reputation&filter=!LnNkvq0d-S*rS_0sMTDFRm&inname="+esc(t.FullName), nil, &r) {
+		return
+	}
+	n := 0
+	for _, u := range r.Items {
+		u.DisplayName, u.Location = html.UnescapeString(u.DisplayName), html.UnescapeString(u.Location)
+		if !nameMatches(u.DisplayName, t.FullName) || n >= 5 {
+			continue
+		}
+		n++
+		rec := models.Record{Platform: "Stack Overflow", URL: u.Link, Name: u.DisplayName, Location: u.Location,
+			Photo: u.Image, Bio: clip(stripHTML(u.About), 400), IDs: map[string]string{"stackexchange": itoa(u.AccountID)}}
+		if u.Website != "" {
+			rec.Websites = []string{u.Website}
+		}
+		emit(finding("Stack Overflow member", "person", 0.45, rec, t))
+	}
+}
+
+// huggingFace lists Hugging Face members whose full name matches.
+func huggingFace(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding)) {
+	if len(strings.Fields(t.FullName)) < 2 {
+		return
+	}
+	var r struct {
+		Users []struct {
+			User     string `json:"user"`
+			Fullname string `json:"fullname"`
+			Avatar   string `json:"avatarUrl"`
+		} `json:"users"`
+	}
+	if !getJSON(ctx, c, "https://huggingface.co/api/quicksearch?type=user&q="+esc(t.FullName), nil, &r) {
+		return
+	}
+	n := 0
+	for _, u := range r.Users {
+		if !nameMatches(u.Fullname, t.FullName) || n >= 4 {
+			continue
+		}
+		n++
+		photo := u.Avatar
+		if strings.HasPrefix(photo, "/") {
+			photo = "https://huggingface.co" + photo
+		}
+		rec := models.Record{Platform: "Hugging Face", URL: "https://huggingface.co/" + u.User, Name: u.Fullname, Photo: photo,
+			Usernames: []string{"huggingface:" + u.User}, Self: true}
+		emit(finding("Hugging Face member", "person", 0.45, rec, t))
 	}
 }
