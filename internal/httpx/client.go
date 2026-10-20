@@ -64,6 +64,7 @@ type Request struct {
 	Body       string
 	NoRedirect bool          // return the first response instead of following redirects
 	Timeout    time.Duration // per-call override of the client timeout (0 = client default)
+	MaxBody    int64         // per-call override of the response size cap (0 = client default)
 }
 
 // Response is the (body-capped) result of a Request.
@@ -222,7 +223,11 @@ func (c *Client) once(ctx context.Context, r Request) (*Response, error) {
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(io.LimitReader(resp.Body, c.opts.MaxBodyBytes))
+	limit := c.opts.MaxBodyBytes
+	if r.MaxBody > 0 {
+		limit = r.MaxBody
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, limit))
 	if err != nil {
 		return nil, err
 	}

@@ -76,6 +76,10 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 			err := d.Pool.Submit(ctx, func() {
 				defer wg.Done()
 				e.run(ctx, d.HTTP, u, func(f models.Finding) {
+					if f.Details == nil {
+						f.Details = map[string]string{}
+					}
+					f.Details["handle"] = u // lets identity resolution tie the profile to the handle that found it
 					mu.Lock()
 					buf[u] = append(buf[u], f)
 					mu.Unlock()

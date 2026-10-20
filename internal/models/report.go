@@ -47,7 +47,8 @@ type Finding struct {
 	Confidence float64           `json:"confidence"`
 	Details    map[string]string `json:"details,omitempty"`
 	Entities   []Entity          `json:"entities,omitempty"`
-	Via        string            `json:"via,omitempty"` // set when found by following another finding, e.g. "email:a@b.c"
+	Record     *Record           `json:"record,omitempty"` // set when the finding describes a person profile
+	Via        string            `json:"via,omitempty"`    // set when found by following another finding, e.g. "email:a@b.c"
 	Timestamp  time.Time         `json:"timestamp"`
 }
 
@@ -78,6 +79,8 @@ type Report struct {
 	// Failures lists checks that could not be completed (blocked, timed out,
 	// service offline). They are coverage gaps: a missing result is not proof
 	// that nothing exists.
+	Identities  []Identity        `json:"identities,omitempty"` // resolved people, best match first
+	Ambiguity   string            `json:"ambiguity,omitempty"`  // set when several people plausibly match
 	Photos      []Photo           `json:"photos,omitempty"`
 	ManualLeads []Lead            `json:"manual_leads,omitempty"`
 	Failures    []Failure         `json:"failures,omitempty"`

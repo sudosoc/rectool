@@ -140,6 +140,8 @@ func webJob(ctx context.Context, c *httpx.Client, domain string, emit func(model
 			models.Entity{Type: models.EntUsername, Value: p.Handle}))
 	}
 
+	personData(ctx, c, w, links, emit)
+
 	// ---- well-known files ------------------------------------------------
 	base := "https://" + host
 	if !https {

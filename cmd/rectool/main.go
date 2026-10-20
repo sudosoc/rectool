@@ -26,19 +26,20 @@ func main() { os.Exit(run()) }
 func run() int {
 	def := app.Defaults()
 	var (
-		fullName = flag.String("n", "", "full name")
-		username = flag.String("u", "", "username / handle")
-		email    = flag.String("e", "", "email address")
-		phone    = flag.String("p", "", "phone number (international format, e.g. +15551234567)")
-		domain   = flag.String("d", "", "domain, website or social-profile URL")
-		ipAddr   = flag.String("ip", "", "IP address")
-		company  = flag.String("c", "", "company / organisation name")
-		location = flag.String("l", "", "location (city / country) to focus searches")
-		alias    = flag.String("a", "", "nickname / alias / known-as")
-		asnFlag  = flag.String("asn", "", "autonomous system number, e.g. AS13335")
-		wallet   = flag.String("w", "", "Bitcoin or Ethereum wallet address")
-		aggress  = flag.Bool("aggressive", false, "maximum coverage: derive usernames, verify hits, deeper and wider pivoting, more dorks")
-		depth    = flag.Int("pivot-depth", def.PivotDepth, "rounds of following discovered leads")
+		fullName  = flag.String("n", "", "full name")
+		username  = flag.String("u", "", "username / handle")
+		email     = flag.String("e", "", "email address")
+		phone     = flag.String("p", "", "phone number (international format, e.g. +15551234567)")
+		domain    = flag.String("d", "", "domain, website or social-profile URL")
+		ipAddr    = flag.String("ip", "", "IP address")
+		company   = flag.String("c", "", "company / organisation name")
+		location  = flag.String("l", "", "location (city / country) to focus searches")
+		alias     = flag.String("a", "", "nickname / alias / known-as")
+		asnFlag   = flag.String("asn", "", "autonomous system number, e.g. AS13335")
+		wallet    = flag.String("w", "", "Bitcoin or Ethereum wallet address")
+		notesFile = flag.String("notes-file", "", "file with text to treat as a profile: a CV, a LinkedIn page you copied from your own browser, a bio")
+		aggress   = flag.Bool("aggressive", false, "maximum coverage: derive usernames, verify hits, deeper and wider pivoting, more dorks")
+		depth     = flag.Int("pivot-depth", def.PivotDepth, "rounds of following discovered leads")
 
 		webAddr  = flag.String("web", "", "start the web UI on this address instead of scanning (e.g. 127.0.0.1:8080)")
 		webToken = flag.String("web-token", "", "access token for the web UI (default: random, printed at startup)")
@@ -134,7 +135,7 @@ func run() int {
 	target := models.Target{
 		FullName: *fullName, Username: *username, Email: *email, Phone: *phone,
 		Domain: *domain, IP: *ipAddr, Company: *company, Location: *location,
-		Alias: *alias, ASN: *asnFlag, Wallet: *wallet,
+		Alias: *alias, ASN: *asnFlag, Wallet: *wallet, Notes: readNotes(*notesFile),
 	}
 	if target.IsEmpty() && isTerminal(os.Stdin) {
 		target = promptTarget()
@@ -278,4 +279,17 @@ func promptTarget() models.Target {
 		Alias: ask("Nickname / alias"), Domain: ask("Domain / website / profile URL"), IP: ask("IP address"),
 		ASN: ask("ASN"), Wallet: ask("Crypto wallet"), Company: ask("Company"), Location: ask("Location"),
 	}
+}
+
+// readNotes loads the -notes-file text (silently empty when unset or unreadable).
+func readNotes(path string) string {
+	if path == "" {
+		return ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "[!] notes-file:", err)
+		return ""
+	}
+	return string(b)
 }

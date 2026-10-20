@@ -94,7 +94,8 @@
       </section>
 
       <nav class="tabs" role="tablist" aria-label="Result views">
-        <button class="tab active" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+        <button class="tab active" role="tab" data-tab="identity" aria-selected="true">Identity <span id="idCount" class="count">0</span></button>
+        <button class="tab" role="tab" data-tab="overview" aria-selected="false">Overview</button>
         <button class="tab" role="tab" data-tab="tree" aria-selected="false">Intelligence tree</button>
         <button class="tab" role="tab" data-tab="graph" aria-selected="false">Relationship graph</button>
         <button class="tab" role="tab" data-tab="photos" aria-selected="false">Photos <span id="photoCount" class="count">0</span></button>
@@ -102,7 +103,8 @@
         <button class="tab" role="tab" data-tab="coverage" aria-selected="false">Coverage &amp; integrity <span id="gapCount" class="count warn" hidden>0</span></button>
       </nav>
 
-      <div id="tab-overview" class="tabpanel"></div>
+      <div id="tab-identity" class="tabpanel"></div>
+      <div id="tab-overview" class="tabpanel" hidden></div>
       <div id="tab-tree" class="tabpanel" hidden></div>
       <div id="tab-graph" class="tabpanel" hidden>
         <div class="graph-bar">

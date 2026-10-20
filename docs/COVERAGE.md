@@ -10,7 +10,7 @@ Nothing here can promise *everything* about a person: private accounts, data beh
 |---|---|---|---|
 | **Username** | presence on 630+ platforms; profile data (real name, location, bio, company, websites, linked accounts, public e-mails, commit e-mails, SSH-key presence) from ~22 platforms; profile **pictures**; cross-platform picture matching | WhatsMyName list, GitHub, Keybase, GitLab, Codeberg, npm, Hugging Face, crates.io, Docker Hub, Mastodon, Bluesky, Telegram, Steam, Reddit, Hacker News, DEV, Stack Overflow, Wikipedia, Lichess, Chess.com, Codeforces, Gravatar | Instagram, X, Facebook, TikTok, Threads, LinkedIn, Snapchat (login / anti-bot) → manual links |
 | **Nickname / alias** | handle variants probed everywhere; exact-phrase web search | as above + Brave/Bing | — |
-| **Full name** | name leads in Wikidata, ORCID, OpenAlex, GitHub user search; name dorks (profiles, documents, CVs); derived usernames in aggressive mode | public registries, search engines | people-search sites, LinkedIn/Facebook search (login) → manual links |
+| **Full name** | candidate person records (employers, schools, location, interests, e-mail, websites, photo) from ORCID, Wikidata, OpenAlex, GitHub, personal sites and CV PDFs, resolved into separate identities and scored against your other inputs; name dorks; derived usernames in aggressive mode | public registries, search engines | LinkedIn (blocks automated access: paste its text or use the manual link), people-search sites, Facebook (login) → manual links |
 | **E-mail** | mail provider & MX; Gravatar profile **and picture**; GitHub accounts publishing it (verified) and commits authored with it; stealer-log exposure (counts/dates only); verified web mentions; the domain behind it when not a public provider | DNS, Gravatar, GitHub, Hudson Rock public index, search engines | account-existence checks on other sites (holehe wrapper if installed), breach databases (paid) → manual links |
 | **Phone** | validity, country, area, line type, original carrier, time zones, formats; verified web mentions | libphonenumber (offline), search engines | owner / caller-ID (Truecaller, Sync.ME need login) → manual links; WhatsApp/Telegram deep links |
 | **Domain / URL** | DNS, SPF/DMARC/DKIM, mail provider, SaaS in use (TXT tokens), RDAP registration and contacts, subdomains (CT logs + passive DNS) resolved with wildcard detection, takeover candidates, website title/tech/headers/cookies/tracking IDs, contacts and social links on the site, robots/sitemap/security.txt, TLS certificate, archived sensitive-looking URLs, stealer-log counts | DNS, RDAP, crt.sh, certspotter, HackerTarget, Internet Archive, Hudson Rock, the site itself | historical DNS, reverse WHOIS, Shodan/Censys deep data (paid/login) → manual links |
@@ -19,6 +19,10 @@ Nothing here can promise *everything* about a person: private accounts, data beh
 | **Company** | likely websites verified against the page, official legal-entity records (GLEIF), Wikipedia/Wikidata, GitHub organisation, company dorks | GLEIF, Wikipedia, Wikidata, GitHub | OpenCorporates, Crunchbase, LinkedIn (CAPTCHA/login) → manual links |
 | **Wallet (BTC / ETH)** | balance, transaction counts, first/last activity, contract status, ENS name, scam-report dorks | mempool.space, Blockscout | clustering and abuse databases (account) → manual links |
 | **Location** | narrows searches, parses local phone numbers, corroborates profiles | — | — |
+
+## Identity and accuracy
+
+Facts are grouped per *person*, never blended across people who share a name or handle. See "Identity resolution" in the README for the rules (what links records, what never does, how scores and ✔ confirmations work). What the system will not do: pretend a name is enough. With only a common name it returns several candidates and says so; add a location, employer, e-mail or username and the best match separates from the rest.
 
 ## Pictures
 

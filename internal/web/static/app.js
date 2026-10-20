@@ -114,6 +114,11 @@ RT.buildForm = function buildForm(info) {
     }
   }
 
+  fields.append(el("div", { class: "group", text: "Evidence you already have" }));
+  const notesLabel = el("label", { for: "f_notes" }, el("span", { text: "Paste text (CV, LinkedIn page, bio…)" }), RT.infoBtn("notes"));
+  const notes = el("textarea", { name: "notes", id: "f_notes", rows: "3", maxlength: "30000", class: "notes", placeholder: "Optional. Text you copied from a source rectool cannot open." });
+  fields.append(el("div", { class: "field" }, notesLabel, notes));
+
   const check = (name, title, sub, checked) => {
     const cb = el("input", { type: "checkbox", name });
     if (checked) cb.checked = true;
@@ -161,7 +166,7 @@ RT.bindForm = function bindForm() {
     const v = (n) => f.elements[n].value;
     const body = {
       full_name: v("full_name"), username: v("username"), alias: v("alias"), email: v("email"), phone: v("phone"),
-      domain: v("domain"), ip: v("ip"), asn: v("asn"), wallet: v("wallet"), company: v("company"), location: v("location"),
+      domain: v("domain"), ip: v("ip"), asn: v("asn"), wallet: v("wallet"), company: v("company"), location: v("location"), notes: v("notes"),
       modules: chosen.length === mods.length ? [] : chosen,
       aggressive: f.elements["aggressive"].checked, verify: f.elements["verify"].checked,
       derive: f.elements["derive"].checked, no_pivot: f.elements["no_pivot"].checked,
@@ -179,7 +184,7 @@ RT.bindForm = function bindForm() {
     }
   });
   $("clearBtn").addEventListener("click", () => {
-    document.querySelectorAll("#fields input").forEach((i) => (i.value = ""));
+    document.querySelectorAll("#fields input, #fields textarea").forEach((i) => (i.value = ""));
     RT.showFormError("");
   });
 };
@@ -219,7 +224,7 @@ RT.openScan = function openScan(id) {
   $("targetChips").replaceChildren();
   RT.setState("running");
   RT.resetViews();
-  RT.selectTab("overview");
+  RT.selectTab("identity");
 
   RT.api("/api/scans/" + id).then((s) => { S.target = s.target; RT.renderTargetChips(); RT.scheduleRender(); }).catch(() => {});
 
@@ -227,6 +232,7 @@ RT.openScan = function openScan(id) {
   S.es = es;
   es.addEventListener("finding", (e) => RT.addFinding(JSON.parse(e.data)));
   es.addEventListener("progress", (e) => RT.onProgress(JSON.parse(e.data)));
+  es.addEventListener("identities", (e) => RT.onIdentities(JSON.parse(e.data)));
   es.addEventListener("done", (e) => { RT.onDone(JSON.parse(e.data)); es.close(); });
   es.addEventListener("error", (e) => {
     if (e.data) { RT.onFailed(JSON.parse(e.data).error); es.close(); }
@@ -265,6 +271,14 @@ RT.addFinding = function addFinding(f) {
   RT.scheduleRender();
 };
 
+RT.onIdentities = function onIdentities(d) {
+  const S = RT.S;
+  S.identities = d.identities || [];
+  S.ambiguity = d.ambiguity || "";
+  S.sameName = d.same_name || 0;
+  RT.scheduleRender();
+};
+
 RT.onProgress = function onProgress(p) {
   RT.S.progress = p;
   const bars = $("bars");
@@ -290,6 +304,7 @@ RT.onDone = function onDone(rep) {
   const S = RT.S;
   S.report = rep;
   S.target = rep.target || S.target;
+  if (rep.identities) { S.identities = rep.identities; S.ambiguity = rep.ambiguity || ""; }
   RT.setState(rep.interrupted ? "cancelled" : "done");
   RT.renderTargetChips();
   const id = S.id;
@@ -337,12 +352,14 @@ RT.render = function render() {
   if (!RT.S) return;
   $("tabCount").textContent = String(RT.S.findings.length);
   $("photoCount").textContent = String(RT.photoList().length);
+  $("idCount").textContent = String((RT.S.identities || []).length);
   const gaps = RT.S.report ? (RT.S.report.failures || []).length : 0;
   $("gapCount").hidden = gaps === 0;
   $("gapCount").textContent = String(gaps);
   const v = RT.views;
   if (!v) return;
-  if (RT.tab === "overview") v.overview();
+  if (RT.tab === "identity") v.identity();
+  else if (RT.tab === "overview") v.overview();
   else if (RT.tab === "tree") v.tree();
   else if (RT.tab === "graph") RT.graph && RT.graph.update();
   else if (RT.tab === "photos") v.photos();
@@ -460,6 +477,23 @@ RT.showPhoto = function showPhoto(p) {
   const href = RT.safeHref(p.url);
   if (href) body.append(el("div", { class: "sec" }, el("h4", { text: "Original" }), el("a", { href, target: "_blank", rel: "noopener noreferrer", text: p.url })));
   $("drawer").hidden = false;
+};
+
+// Fill the case form from a candidate identity and run again: the way to turn
+// "several people match" into one confident answer.
+RT.refine = function refine(id) {
+  const first = (facts) => (facts && facts[0] ? facts[0].value : "");
+  const set = (name, value) => { const f = document.getElementById("f_" + name); if (f && value) f.value = value; };
+  set("full_name", first(id.names));
+  set("location", first(id.locations));
+  set("company", first(id.employers));
+  set("email", first(id.emails));
+  const user = (id.usernames || []).map((u) => u.value.split(":")[1]).find(Boolean);
+  set("username", user);
+  set("domain", (id.websites || []).map((w) => w.value)[0]);
+  document.getElementById("form").scrollIntoView({ behavior: "smooth" });
+  RT.showFormError("");
+  document.getElementById("startBtn").focus();
 };
 
 RT.entityChip = function entityChip(e) {

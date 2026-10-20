@@ -51,6 +51,11 @@ RT.HINTS = {
     ar: "مدينة أو دولة. مش مدخل لوحده: بيضيّق البحث بالاسم والشركة واللقب، وبيساعد في تحليل أرقام الهاتف المحلية، وبيأكّد البروفايلات اللي في نفس المكان.",
   },
 
+  notes: {
+    en: "Paste any text you can see but rectool cannot fetch: a LinkedIn page copied from your own logged-in browser, a LinkedIn 'Save to PDF' export, a CV, a bio. It is parsed into a profile (employers, education, location, e-mail, skills) and joins the identity matching. Nothing is sent anywhere.",
+    ar: "الصق أي نص تقدر تشوفه إنت لكن الأداة مش قادرة تجيبه: صفحة LinkedIn منسوخة من متصفحك وإنت عامل login، أو ملف 'Save to PDF' من LinkedIn، أو CV، أو نبذة. بيتحلل لبروفايل (شغل وتعليم ومكان وإيميل ومهارات) وبيدخل في مطابقة الهوية. مفيش حاجة بتتبعت لأي مكان.",
+  },
+
   // -------------------------------------------------------------- intensity
   aggressive: {
     en: "Maximum coverage. Derives usernames from the name, verifies social hits with a canary test, follows leads 3 rounds deep (up to 25 leads) and runs up to 120 dorks. Slower and sends many more requests, but finds the most.",
@@ -99,8 +104,8 @@ RT.HINTS = {
     ar: "محتاج اسم شركة. مواقع محتملة متحقق منها، وسجلات GLEIF الرسمية، وWikipedia/Wikidata، ومنظمة GitHub.",
   },
   "mod:people": {
-    en: "Needs a full name (2+ words). Low-confidence leads from Wikidata, ORCID, OpenAlex and GitHub name search.",
-    ar: "محتاج اسم كامل (كلمتين أو أكتر). نتايج بثقة منخفضة من Wikidata وORCID وOpenAlex وبحث GitHub بالاسم.",
+    en: "Needs a full name (2+ words), a LinkedIn link or pasted text. Finds candidate profiles (LinkedIn public view when LinkedIn allows it, ORCID, Wikidata, OpenAlex, GitHub, CV documents) and keeps different people with the same name apart.",
+    ar: "محتاج اسم كامل (كلمتين أو أكتر) أو رابط LinkedIn أو نص ملصوق. بيجيب بروفايلات مرشحة (LinkedIn العام لو سمح، وORCID وWikidata وOpenAlex وGitHub وملفات CV) وبيفصل الناس اللي بنفس الاسم عن بعض.",
   },
   "mod:footprint": {
     en: "Needs an e-mail or phone. MX/provider, Gravatar, GitHub, stealer-log exposure, and web mentions verified by fetching each result page.",

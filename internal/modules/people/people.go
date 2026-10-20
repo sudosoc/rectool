@@ -1,44 +1,79 @@
-// Package people looks a full name up in public identity registries that need
-// no key: Wikidata, ORCID (researchers), OpenAlex (authors) and GitHub user
-// search. Names are ambiguous, so everything here is a low-confidence lead.
+// Package people finds *candidate profiles* of a person and returns them as
+// structured Records for identity resolution: LinkedIn's public profile view,
+// ORCID, Wikidata, OpenAlex, GitHub, personal CV documents.
+//
+// A name is ambiguous. Nothing here decides which "Jane Roe" the operator
+// means: every candidate is returned as its own record, and the identity
+// package keeps different people apart and ranks them against what the
+// operator supplied (location, employer, e-mail, …).
 package people
 
 import (
 	"context"
 	"encoding/json"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/sudosoc/rectool/internal/httpx"
+	"github.com/sudosoc/rectool/internal/identity"
 	"github.com/sudosoc/rectool/internal/models"
+	"github.com/sudosoc/rectool/internal/modules/dorks"
 	"github.com/sudosoc/rectool/internal/scanner"
 )
 
+// Config tunes the module.
+type Config struct {
+	Searcher *dorks.Searcher // shared scraper, used by the CV finder; optional
+}
+
 // Scanner is the people module.
-type Scanner struct{}
+type Scanner struct{ cfg Config }
 
 var _ scanner.Scanner = (*Scanner)(nil)
 
 // New builds the module.
-func New() *Scanner { return &Scanner{} }
+func New(cfg Config) *Scanner { return &Scanner{cfg: cfg} }
 
 func (s *Scanner) Name() string { return "people" }
 func (s *Scanner) Description() string {
-	return "full name in Wikidata, ORCID, OpenAlex and GitHub user search"
+	return "candidate profiles for a name: LinkedIn public view, ORCID, Wikidata, OpenAlex, GitHub, CVs"
 }
-func (s *Scanner) CanRun(t models.Target) bool { return len(strings.Fields(t.FullName)) >= 2 }
+
+func hasLinkedIn(t models.Target) bool {
+	for _, l := range t.Links {
+		if strings.Contains(strings.ToLower(l), "linkedin.com/") {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Scanner) CanRun(t models.Target) bool {
+	return len(strings.Fields(t.FullName)) >= 2 || hasLinkedIn(t) || strings.TrimSpace(t.Notes) != ""
+}
+
+type job struct {
+	name string
+	run  func(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding))
+}
 
 func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emit func(models.Finding)) error {
-	name := t.FullName
-	jobs := []func(){
-		func() { wikidata(ctx, d.HTTP, name, emit) },
-		func() { orcid(ctx, d.HTTP, name, emit) },
-		func() { openAlex(ctx, d.HTTP, name, emit) },
-		func() { githubSearch(ctx, d.HTTP, name, t.Location, emit) },
+	jobs := []job{
+		{"linkedin", linkedIn},
+		{"orcid", orcid},
+		{"wikidata", wikidata},
+		{"openalex", openAlex},
+		{"github", githubPeople},
+		{"notes", pastedProfile},
+	}
+	if s.cfg.Searcher != nil {
+		search := s.cfg.Searcher
+		jobs = append(jobs, job{"cv", func(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding)) {
+			cvFinder(ctx, c, search, t, emit)
+		}})
 	}
 	var (
 		wg   sync.WaitGroup
@@ -48,7 +83,7 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 		wg.Add(1)
 		if err := d.Pool.Submit(ctx, func() {
 			defer wg.Done()
-			j()
+			j.run(ctx, d.HTTP, t, emit)
 			if d.Progress != nil {
 				d.Progress(s.Name(), int(done.Add(1)), len(jobs))
 			}
@@ -61,10 +96,7 @@ func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emi
 	return ctx.Err()
 }
 
-func fnd(source, link string, conf float64, d map[string]string, ents ...models.Entity) models.Finding {
-	return models.Finding{Source: source, Category: "identity", URL: link, Status: models.StatusFound,
-		Confidence: conf, Details: d, Entities: ents}
-}
+// ------------------------------------------------------------------ helpers
 
 func getJSON(ctx context.Context, c *httpx.Client, u string, hdr map[string]string, out any) bool {
 	if hdr == nil {
@@ -73,112 +105,116 @@ func getJSON(ctx context.Context, c *httpx.Client, u string, hdr map[string]stri
 	if hdr["Accept"] == "" {
 		hdr["Accept"] = "application/json"
 	}
-	resp, err := c.Do(ctx, httpx.Request{URL: u, Timeout: 20 * time.Second, Headers: hdr})
+	resp, err := c.Do(ctx, httpx.Request{URL: u, Timeout: 25 * time.Second, Headers: hdr})
 	if err != nil || resp.StatusCode != 200 {
 		return false
 	}
 	return json.Unmarshal(resp.Body, out) == nil
 }
 
-func wikidata(ctx context.Context, c *httpx.Client, name string, emit func(models.Finding)) {
-	var r struct {
-		Search []struct {
-			ID          string `json:"id"`
-			Label       string `json:"label"`
-			Description string `json:"description"`
-		} `json:"search"`
+func esc(s string) string { return url.QueryEscape(s) }
+
+func nameMatches(a, b string) bool { return identity.MatchNames(a, b) == identity.NameStrong }
+
+// trusted reports whether a candidate record already agrees with what the
+// operator supplied strongly enough that its leads (e-mail, website, handles)
+// may be followed automatically. Everything else is shown but not followed
+// until identity resolution picks that person.
+func trusted(rec models.Record, t models.Target) bool {
+	if t.FullName != "" && identity.MatchNames(t.FullName, rec.Name) != identity.NameStrong {
+		return false
 	}
-	if !getJSON(ctx, c, "https://www.wikidata.org/w/api.php?action=wbsearchentities&language=en&format=json&limit=5&search="+url.QueryEscape(name), nil, &r) {
-		return
+	res := identity.Resolve([]identity.Input{{Rec: rec}}, identity.FromTarget(t))
+	if len(res.Identities) == 0 {
+		return false
 	}
-	for _, s := range r.Search {
-		if !strings.EqualFold(s.Label, name) {
-			continue
+	m := res.Identities[0].Matched
+	for _, k := range m {
+		if k != "name" && k != "name (partial)" {
+			return true
 		}
-		emit(fnd("Wikidata: "+s.Label, "https://www.wikidata.org/wiki/"+s.ID, 0.35, map[string]string{
-			"description": s.Description, "id": s.ID,
-			"note": "exact name match; common names collide, check the description",
-		}))
 	}
+	return false
 }
 
-func orcid(ctx context.Context, c *httpx.Client, name string, emit func(models.Finding)) {
-	parts := strings.Fields(name)
-	given, family := parts[0], parts[len(parts)-1]
-	var r struct {
-		NumFound int `json:"num-found"`
-		Result   []struct {
-			ID struct {
-				URI string `json:"uri"`
-			} `json:"orcid-identifier"`
-		} `json:"result"`
-	}
-	q := "given-names:" + given + " AND family-name:" + family
-	if !getJSON(ctx, c, "https://pub.orcid.org/v3.0/expanded-search/?rows=5&q="+url.QueryEscape(q), nil, &r) {
-		return
-	}
-	for _, x := range r.Result {
-		emit(fnd("ORCID researcher record", x.ID.URI, 0.3, map[string]string{
-			"matches for this name": strconv.Itoa(r.NumFound),
-			"note":                  "name match only; open the record to check affiliation",
-		}))
-	}
-}
-
-func openAlex(ctx context.Context, c *httpx.Client, name string, emit func(models.Finding)) {
-	var r struct {
-		Results []struct {
-			ID            string `json:"id"`
-			DisplayName   string `json:"display_name"`
-			WorksCount    int    `json:"works_count"`
-			LastKnownInst []struct {
-				DisplayName string `json:"display_name"`
-				Country     string `json:"country_code"`
-			} `json:"last_known_institutions"`
-		} `json:"results"`
-	}
-	if !getJSON(ctx, c, "https://api.openalex.org/authors?per-page=3&search="+url.QueryEscape(name), nil, &r) {
-		return
-	}
-	for _, a := range r.Results {
-		if !strings.EqualFold(a.DisplayName, name) {
-			continue
+// finding turns a Record into a finding with a readable detail summary, and
+// entities for its contact points (strong only when the record is trusted).
+func finding(source, category string, conf float64, rec models.Record, t models.Target) models.Finding {
+	d := map[string]string{}
+	set := func(k, v string) {
+		if v = strings.TrimSpace(v); v != "" {
+			d[k] = v
 		}
-		d := map[string]string{"works": strconv.Itoa(a.WorksCount), "note": "name match only"}
-		var insts []string
-		for _, i := range a.LastKnownInst {
-			insts = append(insts, i.DisplayName+" ("+i.Country+")")
-		}
-		if len(insts) > 0 {
-			d["last known institutions"] = strings.Join(insts, ", ")
-		}
-		emit(fnd("OpenAlex author: "+a.DisplayName, a.ID, 0.3, d))
 	}
-}
-
-func githubSearch(ctx context.Context, c *httpx.Client, name, location string, emit func(models.Finding)) {
-	q := `"` + name + `" in:fullname`
-	if location != "" {
-		q += ` location:"` + location + `"`
+	set("name", rec.Name)
+	set("headline", rec.Headline)
+	set("current roles", strings.Join(rec.Roles, "; "))
+	set("employers", strings.Join(rec.Employers, "; "))
+	set("location", rec.Location)
+	set("education", strings.Join(rec.Education, "; "))
+	set("interests", strings.Join(rec.Interests, ", "))
+	set("emails", strings.Join(rec.Emails, ", "))
+	set("phones", strings.Join(rec.Phones, ", "))
+	set("websites", strings.Join(rec.Websites, ", "))
+	set("about", clip(rec.Bio, 400))
+	set("avatar", rec.Photo)
+	for k, v := range rec.IDs {
+		set(k+" id", v)
 	}
-	var r struct {
-		Total int `json:"total_count"`
-		Items []struct {
-			Login   string `json:"login"`
-			HTMLURL string `json:"html_url"`
-		} `json:"items"`
-	}
-	if !getJSON(ctx, c, "https://api.github.com/search/users?per_page=5&q="+url.QueryEscape(q), nil, &r) || len(r.Items) == 0 {
-		return
-	}
-	var logins []string
 	var ents []models.Entity
-	for _, it := range r.Items {
-		logins = append(logins, it.Login)
-		ents = append(ents, models.Entity{Type: models.EntUsername, Value: it.Login}) // weak: many people share a name
+	strong := trusted(rec, t)
+	for _, e := range rec.Emails {
+		ents = append(ents, models.Entity{Type: models.EntEmail, Value: e, Strong: strong})
 	}
-	emit(fnd("GitHub users named "+name, "https://github.com/search?type=users&q="+url.QueryEscape(name), 0.3, map[string]string{
-		"matches": strconv.Itoa(r.Total), "top logins": strings.Join(logins, ", "),
-		"note": "full-name search; each login is only a candidate",
-	}, ents...))
+	for _, p := range rec.Phones {
+		ents = append(ents, models.Entity{Type: models.EntPhone, Value: p})
+	}
+	for _, w := range rec.Websites {
+		if dom := domainOf(w); dom != "" {
+			ents = append(ents, models.Entity{Type: models.EntDomain, Value: dom, Strong: strong})
+		}
+	}
+	if rec.Name != "" {
+		ents = append(ents, models.Entity{Type: models.EntName, Value: rec.Name})
+	}
+	if rec.Location != "" {
+		ents = append(ents, models.Entity{Type: models.EntLocation, Value: rec.Location})
+	}
+	for _, e := range rec.Employers {
+		ents = append(ents, models.Entity{Type: models.EntOrg, Value: e})
+	}
+	r := rec
+	return models.Finding{Source: source, Category: category, URL: rec.URL, Status: models.StatusFound,
+		Confidence: conf, Details: d, Entities: ents, Record: &r}
+}
+
+func domainOf(raw string) string {
+	if !strings.Contains(raw, "://") {
+		raw = "https://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	h := strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.")
+	switch h {
+	case "", "twitter.com", "x.com", "github.com", "linkedin.com", "facebook.com", "instagram.com", "youtube.com", "medium.com", "gitlab.com", "orcid.org", "scholar.google.com", "researchgate.net":
+		return ""
+	}
+	if !strings.Contains(h, ".") {
+		return ""
+	}
+	return h
+}
+
+func clip(s string, n int) string {
+	s = strings.TrimSpace(s)
+	if len(s) > n {
+		return s[:n] + "…"
+	}
+	return s
+}
+
+func errFinding(source string, msg string) models.Finding {
+	return models.Finding{Source: source, Category: "identity", Status: models.StatusError, Details: map[string]string{"error": msg}}
 }

@@ -1,6 +1,8 @@
 // Package models holds the data structures shared by every layer of rectool.
 package models
 
+import "strings"
+
 // Target is the set of (all optional) identifiers the operator supplies.
 type Target struct {
 	FullName string `json:"full_name,omitempty"`
@@ -18,13 +20,20 @@ type Target struct {
 	// Aliases are candidate usernames derived by the engine's planner
 	// (e-mail local part, name permutations). Never set by the user directly.
 	Aliases []string `json:"aliases,omitempty"`
+
+	// Notes is free text the operator pasted (a CV, a LinkedIn page copied from their own
+	// browser, a bio). It is parsed into a profile record, never sent anywhere.
+	Notes string `json:"notes,omitempty"`
+
+	// Links are profile URLs the operator pasted (LinkedIn, X, GitHub…); set by the planner.
+	Links []string `json:"links,omitempty"`
 }
 
 // IsEmpty reports whether the operator supplied no identifier at all.
 // Location alone is only a refinement, so it does not count.
 func (t Target) IsEmpty() bool {
 	return t.FullName == "" && t.Username == "" && t.Email == "" && t.Phone == "" &&
-		t.Domain == "" && t.IP == "" && t.Company == "" && t.Alias == "" && t.ASN == "" && t.Wallet == ""
+		t.Domain == "" && t.IP == "" && t.Company == "" && t.Alias == "" && t.ASN == "" && t.Wallet == "" && strings.TrimSpace(t.Notes) == ""
 }
 
 // Usernames returns the explicit username followed by derived aliases,

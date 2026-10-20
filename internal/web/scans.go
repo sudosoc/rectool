@@ -14,6 +14,7 @@ import (
 
 	"github.com/sudosoc/rectool/internal/app"
 	"github.com/sudosoc/rectool/internal/engine"
+	"github.com/sudosoc/rectool/internal/identity"
 	"github.com/sudosoc/rectool/internal/models"
 	"github.com/sudosoc/rectool/internal/output"
 )
@@ -45,6 +46,7 @@ type scan struct {
 	progress map[string][2]int
 	hits     int
 	report   *models.Report
+	all      []models.Finding // positive findings so far, for live identity resolution
 	cancel   context.CancelFunc
 }
 
@@ -136,6 +138,7 @@ type ScanRequest struct {
 	Company    string   `json:"company"`
 	Location   string   `json:"location"`
 	Alias      string   `json:"alias"`
+	Notes      string   `json:"notes"`
 	ASN        string   `json:"asn"`
 	Wallet     string   `json:"wallet"`
 	Modules    []string `json:"modules"`
@@ -197,6 +200,10 @@ func newID() string {
 }
 
 func validateRequest(r *ScanRequest) error {
+	r.Notes = strings.TrimSpace(r.Notes)
+	if len(r.Notes) > 30000 {
+		return errors.New("pasted text too long (max 30000 characters)")
+	}
 	for _, f := range []*string{&r.FullName, &r.Username, &r.Email, &r.Phone, &r.Domain, &r.IP, &r.Company, &r.Location, &r.Alias, &r.ASN, &r.Wallet} {
 		*f = strings.TrimSpace(*f)
 		if len(*f) > 200 {
@@ -206,7 +213,7 @@ func validateRequest(r *ScanRequest) error {
 	if len(r.Proxies) > 50 {
 		return errors.New("too many proxies")
 	}
-	if r.FullName == "" && r.Username == "" && r.Email == "" && r.Phone == "" && r.Domain == "" && r.IP == "" && r.Company == "" && r.Alias == "" && r.ASN == "" && r.Wallet == "" {
+	if r.FullName == "" && r.Username == "" && r.Email == "" && r.Phone == "" && r.Domain == "" && r.IP == "" && r.Company == "" && r.Alias == "" && r.ASN == "" && r.Wallet == "" && r.Notes == "" {
 		return errNoInput
 	}
 	return nil
@@ -221,7 +228,7 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 	// domain or IP) are reported to the form instead of failing the run later.
 	probe := models.Target{FullName: req.FullName, Username: req.Username, Email: req.Email, Phone: req.Phone,
 		Domain: req.Domain, IP: req.IP, Company: req.Company, Location: req.Location,
-		Alias: req.Alias, ASN: req.ASN, Wallet: req.Wallet}
+		Alias: req.Alias, ASN: req.ASN, Wallet: req.Wallet, Notes: req.Notes}
 	if err := engine.Enrich(&probe, false, 0); err != nil {
 		return nil, err
 	}
@@ -269,6 +276,9 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 	eng.OnFinding = func(f models.Finding) {
 		sc.mu.Lock()
 		sc.hits++
+		if len(sc.all) < 6000 {
+			sc.all = append(sc.all, f)
+		}
 		sc.mu.Unlock()
 		for _, ent := range f.Entities {
 			if ent.Type == models.EntImage {
@@ -277,6 +287,8 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 		}
 		sc.push(event{Type: "finding", Data: f})
 	}
+
+	go liveIdentities(ctx, sc, probe)
 
 	go func() {
 		defer cancel()
@@ -346,4 +358,36 @@ func (m *manager) list() []Summary {
 		out[i] = s.summary()
 	}
 	return out
+}
+
+// liveIdentities re-resolves identities every few seconds while a scan runs, so
+// the browser shows who the findings add up to (and whether it is ambiguous)
+// long before the scan ends. Pictures are not downloaded yet at this point, so
+// picture-based links only appear in the final report.
+func liveIdentities(ctx context.Context, sc *scan, t models.Target) {
+	tick := time.NewTicker(3 * time.Second)
+	defer tick.Stop()
+	last := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		sc.mu.Lock()
+		n := len(sc.all)
+		snap := append([]models.Finding(nil), sc.all...)
+		sc.mu.Unlock()
+		if n == last {
+			continue
+		}
+		last = n
+		res := identity.ResolveFindings(snap, t, nil)
+		if len(res.Identities) == 0 {
+			continue
+		}
+		sc.push(event{Type: "identities", Data: map[string]any{
+			"identities": res.Identities, "ambiguity": res.Note, "same_name": res.SameName, "target": t,
+		}})
+	}
 }

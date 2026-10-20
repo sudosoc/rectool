@@ -30,11 +30,26 @@ func Enrich(t *models.Target, deriveFromName bool, maxAliases int) error {
 		t.Email = strings.ToLower(addr.Address)
 	}
 	t.Alias = strings.Join(strings.Fields(t.Alias), " ")
+	t.Notes = strings.TrimSpace(t.Notes)
+	if len(t.Notes) > 30000 {
+		t.Notes = t.Notes[:30000]
+	}
 	if t.Domain != "" {
 		// A pasted profile link (twitter.com/x, github.com/x, …) is a username,
 		// not a domain to investigate.
 		if prof, ok := profileFromURL(t.Domain); ok {
-			if t.Username == "" {
+			link := strings.TrimSpace(t.Domain)
+			if !strings.Contains(link, "://") {
+				link = "https://" + link
+			}
+			t.Links = appendLink(t.Links, link)
+			if isLinkedIn(link) {
+				// A LinkedIn vanity slug is rarely the handle used elsewhere, so it is
+				// not probed as a username; its name part is a usable full name.
+				if t.FullName == "" {
+					t.FullName = nameFromSlug(prof)
+				}
+			} else if t.Username == "" {
 				t.Username = prof
 			} else if !strings.EqualFold(t.Username, prof) {
 				t.Aliases = append(t.Aliases, prof)
@@ -215,4 +230,31 @@ func profileFromURL(raw string) (string, bool) {
 	}
 	h = strings.Trim(h, "/@ ")
 	return h, h != ""
+}
+
+func appendLink(links []string, l string) []string {
+	for _, x := range links {
+		if strings.EqualFold(strings.TrimSuffix(x, "/"), strings.TrimSuffix(l, "/")) {
+			return links
+		}
+	}
+	return append(links, l)
+}
+
+func isLinkedIn(link string) bool { return strings.Contains(strings.ToLower(link), "linkedin.com/") }
+
+// nameFromSlug turns "jane-roe-1a2b3c" into "Jane Roe" (a trailing token that
+// contains digits is LinkedIn's disambiguation suffix, not part of the name).
+func nameFromSlug(slug string) string {
+	var parts []string
+	for _, w := range strings.FieldsFunc(slug, func(r rune) bool { return r == '-' || r == '_' || r == '.' }) {
+		if strings.IndexFunc(w, unicode.IsDigit) >= 0 {
+			continue
+		}
+		parts = append(parts, strings.ToUpper(w[:1])+w[1:])
+	}
+	if len(parts) < 2 {
+		return ""
+	}
+	return strings.Join(parts, " ")
 }

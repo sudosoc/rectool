@@ -135,7 +135,7 @@ func Build(o Options) (*Built, error) {
 	eng.Register(ip.New())
 	eng.Register(profiles.New())
 	eng.Register(company.New())
-	eng.Register(people.New())
+	eng.Register(people.New(people.Config{Searcher: searcher}))
 	eng.Register(phone.New())
 	eng.Register(crypto.New())
 	eng.Register(asn.New())

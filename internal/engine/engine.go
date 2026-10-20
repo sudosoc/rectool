@@ -177,7 +177,7 @@ func (e *Engine) Run(ctx context.Context, t models.Target) (*models.Report, erro
 		seen := seedSeen(rep.Target)
 		budget := e.cfg.MaxPivots
 		for depth := 0; depth < e.cfg.PivotDepth && budget > 0 && ctx.Err() == nil; depth++ {
-			ps := e.pivots(rep, seen, budget)
+			ps := e.pivots(rep, seen, budget, e.pivotFilter(rep))
 			if len(ps) == 0 {
 				break
 			}
@@ -201,6 +201,7 @@ func (e *Engine) Run(ctx context.Context, t models.Target) (*models.Report, erro
 
 	rep.Entities = collectEntities(rep)
 	e.photoStage(ctx, rep)
+	e.identityStage(rep)
 	rep.ManualLeads = leads.Build(rep.Target)
 	rep.Interrupted = ctx.Err() != nil
 	rep.FinishedAt = time.Now().UTC()
@@ -383,10 +384,10 @@ func seedSeen(t models.Target) map[string]bool {
 
 // pivots picks the strongest not-yet-followed entities found so far and marks
 // them seen. A strong e-mail on a non-public domain also yields that domain.
-func (e *Engine) pivots(rep *models.Report, seen map[string]bool, limit int) []pivot {
+func (e *Engine) pivots(rep *models.Report, seen map[string]bool, limit int, allow func(models.Entity) bool) []pivot {
 	byType := map[string][]models.Entity{}
 	add := func(ent models.Entity) {
-		if len(pivotModules[ent.Type]) == 0 {
+		if len(pivotModules[ent.Type]) == 0 || !allow(ent) {
 			return
 		}
 		k := ent.Type + ":" + strings.ToLower(ent.Value)

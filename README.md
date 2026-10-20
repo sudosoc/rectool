@@ -47,10 +47,11 @@ It prints a URL containing a random access token; open it in your browser (the t
 
 **Case panel (left).** Fill in whatever you know: every input, collector and option has an **ⓘ** hint (English and Arabic) explaining what turning it on will do. *Aggressive* is on by default; untick it for a quicker, lighter run. Proxies are optional.
 
-**Workspace (right).** Live progress per collector, then six views of the same data:
+**Workspace (right).** Live progress per collector, then seven views of the same data:
 
 | View | What it gives you |
 |---|---|
+| **Identity** | Who the findings add up to: the best-matching person as a dossier with confirmation badges, other candidates kept apart, "search again with these details" |
 | **Overview** | KPI tiles, key facts about the subject (names, handles, e-mails, phones, domains, IPs, places), notable risk signals (expired TLS, spoofable mail, takeover candidates, stealer-log exposure…), a reliability distribution, findings per collector |
 | **Intelligence tree** | Everything organised as Subject → Identity / Contact points / Online accounts / Infrastructure / Organisation / Exposure / Crypto / Search leads, searchable, click any leaf for its evidence |
 | **Relationship graph** | Force-directed map of how leads were found: subject → inputs → what the first pass found → what following those leads found. Drag, zoom, click nodes, hide weak leads |
@@ -111,7 +112,7 @@ A pasted **profile link** in the domain field (`-d https://x.com/handle`) is rec
 | `domain` | domain | DNS records; SPF/DMARC/DKIM and mail provider; SaaS used (TXT tokens); RDAP registration and contacts; **subdomains** (crt.sh, certspotter, HackerTarget, TLS SANs) resolved and checked for wildcard DNS; website title/tech/security headers/cookies/tracking IDs; emails, phones and social links on the site; robots.txt, sitemap, security.txt; TLS certificate; Internet Archive URLs; stealer-log exposure counts. |
 | `ip` | IP | Reverse DNS, ASN (Team Cymru via DNS), RDAP, geolocation, ports/CVEs already indexed by Shodan InternetDB (no scanning by rectool), co-hosted domains, TLS certificate and web banner. |
 | `company` | company | Candidate domains (verified against the live page; only the best one is followed), Wikipedia, Wikidata, GitHub organisation. |
-| `people` | full name | Wikidata, ORCID, OpenAlex, GitHub user search (low-confidence name leads). |
+| `people` | full name, LinkedIn link or pasted text | Candidate profiles as structured records for identity resolution: LinkedIn public view (when allowed), ORCID, Wikidata, OpenAlex, GitHub, CV documents, pasted text. |
 | `footprint` | email or phone | MX, Gravatar profile (name, linked accounts, sites), infostealer exposure (counts/dates only), phone analysis, and web mentions that are verified by fetching each page. |
 | `dorks` | any identifier | Generates dorks from every identifier (site:, filetype:, inurl:, leaks, code, people…) and scrapes Brave / Bing / DuckDuckGo / Google. |
 | `syswrap` | domain, username | Runs `whois`, `dig`, `theHarvester`, `subfinder`, `whatweb`, `sherlock`, `maigret`, `holehe`, `phoneinfoga` and your custom tools through `os/exec` (those installed). |
@@ -125,6 +126,19 @@ Profile pictures from ~22 sources (and Gravatar by e-mail) are downloaded by rec
 ### What is covered, and what is not
 
 See [docs/COVERAGE.md](docs/COVERAGE.md) for the per-identifier map of sources and limits. Anything that needs a login, CAPTCHA or payment is not automated; the report lists those sources as **manual leads** with pre-filled links.
+
+### Identity resolution: different people stay different
+
+A name or a handle is not an identity. Every profile-like finding (GitHub, Keybase, ORCID, Wikidata, OpenAlex, LinkedIn's public view, personal sites, CVs, Gravatar, …) becomes a **record**, and records are clustered into **identities** only on evidence:
+
+- a shared e-mail, phone, unique ID (ORCID, Wikidata…), linked account or website, or the same profile picture;
+- or the same name plus at least two independent matching attributes (place, employer, school, e-mail domain, the same handle on another platform).
+
+Two different accounts on the same platform are never merged by soft evidence (impersonators copy names, places and employers); copies and duplicates are demoted. Each identity is **scored against what you supplied** (name, e-mail, phone, username, domain, company, location, pasted profile link), contradictions lower the score, and every attribute is labelled: ✔ *confirmed* (two or more independent platforms), *self-reported* (the person's own profile) or *1 source*. The **Identity** tab shows the best match as a dossier (photo, role, employers, education, interests, e-mail, accounts, websites, CV), the other candidates separately, and a banner when several people plausibly match, with a button to search again using a candidate's details. Only the best-matching identity's e-mails, accounts and websites are followed automatically; when it is ambiguous, none is.
+
+Sources for a name: ORCID (employments, education, keywords, links), Wikidata (occupation, employer, education, cross-platform IDs, photo), OpenAlex (institutions, research topics), GitHub profiles, personal sites (schema.org Person data) and CV/resume PDFs. A CV is accepted only if its *header* carries the person's name (a CV that merely mentions the name is rejected) and is checked against your e-mail, phone, employer, location and handle.
+
+**LinkedIn.** LinkedIn actively blocks automated access (HTTP 999). rectool can read the logged-out public view of a specific profile URL when LinkedIn allows it, slowly and without evading anything, and stops at the first refusal. When LinkedIn refuses, use the manual link, or open the profile yourself and paste its text (or a "Save to PDF" export) into the **Paste text** box (CLI: `-notes-file`); it is parsed into a record and takes part in identity matching. LinkedIn's terms restrict automated access; use this only where you are entitled to.
 
 ### Pivoting: findings feed each other
 

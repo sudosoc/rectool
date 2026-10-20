@@ -31,6 +31,10 @@ func TestLiveAudit(t *testing.T) {
 	tg := models.Target{
 		Username: env("RECTOOL_LIVE_USER", "torvalds"), Email: env("RECTOOL_LIVE_EMAIL", "torvalds@linux-foundation.org"),
 		Domain: env("RECTOOL_LIVE_DOMAIN", ""), FullName: env("RECTOOL_LIVE_NAME", "Linus Torvalds"),
+		Company: env("RECTOOL_LIVE_COMPANY", ""), Location: env("RECTOOL_LIVE_LOCATION", ""),
+	}
+	if os.Getenv("RECTOOL_LIVE_NOUSER") == "1" {
+		tg.Username, tg.Email = "", ""
 	}
 	opts := Defaults()
 	opts.NoWayback = true
@@ -63,6 +67,41 @@ func TestLiveAudit(t *testing.T) {
 	}
 	for _, p := range rep.Photos {
 		t.Logf("photo group=%d %dx%d %s <- %s", p.Group, p.Width, p.Height, p.URL, strings.Join(p.Sources, " | "))
+	}
+	t.Logf("ambiguity: %q", rep.Ambiguity)
+	for _, id := range rep.Identities {
+		var plats []string
+		for _, r := range id.Records {
+			plats = append(plats, r.Platform)
+		}
+		t.Logf("IDENTITY #%d score=%.2f primary=%v matched=%v :: %s", id.ID, id.Score, id.Primary, id.Matched, id.Label)
+		t.Logf("    records=%v", plats)
+		show := func(name string, facts []models.Fact) {
+			var v []string
+			for i, f := range facts {
+				if i >= 4 {
+					break
+				}
+				mark := ""
+				if f.Confirmed {
+					mark = "✔"
+				}
+				v = append(v, f.Value+mark)
+			}
+			if len(v) > 0 {
+				t.Logf("    %-10s %s", name, strings.Join(v, " | "))
+			}
+		}
+		show("employers", id.Employers)
+		show("locations", id.Locations)
+		show("emails", id.Emails)
+		show("education", id.Education)
+		show("interests", id.Interests)
+		show("websites", id.Websites)
+		show("usernames", id.Usernames)
+		if len(id.Docs) > 0 {
+			t.Logf("    CV docs: %v", id.Docs)
+		}
 	}
 	for _, f := range rep.Findings {
 		if f.Module == "photos" {

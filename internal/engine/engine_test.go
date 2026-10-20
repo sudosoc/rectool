@@ -308,3 +308,51 @@ func TestSiteKeyAndPlaceholderFilter(t *testing.T) {
 		}
 	}
 }
+
+// The accuracy bug this guards against: following another person's e-mail just
+// because they share the handle.
+func TestPivotsOnlyFollowTheBestMatchingIdentity(t *testing.T) {
+	c, _ := httpx.New(httpx.Options{})
+	foot := &fake{name: "footprint", can: func(t models.Target) bool { return t.Email != "" }}
+	prof := func(src, name, loc, email string) models.Finding {
+		d := map[string]string{"handle": "torvalds", "public email": email}
+		if name != "" {
+			d["name"] = name
+		}
+		if loc != "" {
+			d["location"] = loc
+		}
+		return models.Finding{Source: src, Category: "profile", Status: models.StatusFound, Confidence: 0.9, Details: d,
+			Entities: []models.Entity{{Type: models.EntEmail, Value: email, Strong: true}}}
+	}
+	mk := func() *Engine {
+		e := New(Config{Pivot: true}, c)
+		e.Register(&fake{name: "profiles", can: func(t models.Target) bool { return t.Username != "" },
+			run: func(_ models.Target, emit func(models.Finding)) {
+				emit(prof("GitHub profile", "Linus Torvalds", "Portland, OR", "linus@real.example"))
+				emit(prof("npm maintainer", "", "", "stranger@gmail.com"))
+			}})
+		return e
+	}
+
+	// handle alone: two different people share it -> follow neither
+	e := mk()
+	e.Register(foot)
+	if _, err := e.Run(context.Background(), models.Target{Username: "torvalds"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(foot.seen) != 0 {
+		t.Fatalf("ambiguous handle: no identity-derived lead may be followed, ran on %+v", foot.seen)
+	}
+
+	// name + place + handle: one clear winner -> follow only its e-mail
+	foot.seen = nil
+	e = mk()
+	e.Register(foot)
+	if _, err := e.Run(context.Background(), models.Target{Username: "torvalds", FullName: "Linus Torvalds", Location: "Portland"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(foot.seen) != 1 || foot.seen[0].Email != "linus@real.example" {
+		t.Fatalf("only the best-matching person's e-mail may be followed, got %+v", foot.seen)
+	}
+}

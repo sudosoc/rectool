@@ -316,7 +316,7 @@
       const sub = el("div", { class: "fsub" }, el("span", { class: "pill", text: f.category || "other" }));
       if (f.via) sub.append(el("span", { class: "tag via", text: "via " + clip(f.via, 40) }));
       const info = el("td", { class: "info" });
-      const entries = Object.entries(f.details || {}).sort((a, b) => ["note", "md5", "http_status", "avatar", "username", "rank", "engine", "query", "host"].includes(a[0]) - ["note", "md5", "http_status", "avatar", "username", "rank", "engine", "query", "host"].includes(b[0]));
+      const entries = Object.entries(f.details || {}).sort((a, b) => ["note", "md5", "http_status", "avatar", "username", "rank", "engine", "query", "host", "handle"].includes(a[0]) - ["note", "md5", "http_status", "avatar", "username", "rank", "engine", "query", "host", "handle"].includes(b[0]));
       for (const [k, v] of entries.slice(0, 3)) info.append(el("div", { text: k + ": " + clip(v, 160) }));
       const href = RT.safeHref(f.url);
       const title = el("div", { class: "ftitle" });
@@ -446,7 +446,159 @@
     root.append(grid);
   }
 
-  RT.views = { overview, tree, photos, findings, coverage };
+  // ---------------------------------------------------------------- identity
+  const FACT_ROWS = [
+    ["headlines", "Role"], ["employers", "Employers"], ["locations", "Location"], ["education", "Education"],
+    ["interests", "Interests"], ["emails", "E-mail"], ["phones", "Phone"], ["usernames", "Accounts"], ["websites", "Websites"],
+  ];
+
+  function factBadge(f) {
+    if (f.confirmed) return el("span", { class: "badge-c confirmed", title: "Stated by independent sources: " + (f.sources || []).join(", "), text: "✔ " + f.sources.length + " sources" });
+    if (f.self) return el("span", { class: "badge-c self", title: "Stated in the person's own profile (" + (f.sources || []).join(", ") + ")", text: "self-reported" });
+    return el("span", { class: "badge-c single", title: "One third-party source: " + (f.sources || []).join(", "), text: "1 source" });
+  }
+
+  function factList(facts, max, mono) {
+    const box = el("div", { class: "fvals" });
+    for (const f of (facts || []).slice(0, max)) {
+      const href = /^https?:\/\//.test(f.value) ? RT.safeHref(f.value) : null;
+      const v = href ? el("a", { class: "v", href, target: "_blank", rel: "noopener noreferrer", text: f.value }) : el("span", { class: "v" + (mono ? " mono" : ""), text: f.value });
+      box.append(el("div", { class: "fv" }, v, factBadge(f)));
+    }
+    if ((facts || []).length > max) {
+      const more = el("button", { type: "button", class: "ghost small", text: `+${facts.length - max} more` });
+      more.addEventListener("click", () => { more.replaceWith(...facts.slice(max).map((f) => el("div", { class: "fv" }, el("span", { class: "v", text: f.value }), factBadge(f)))); });
+      box.append(more);
+    }
+    return box;
+  }
+
+  function scoreChip(id) {
+    const p = Math.round(id.score * 100);
+    return el("span", { class: "score " + (p >= 70 ? "hi" : p >= 40 ? "mid" : "lo"), title: "How well this person matches what you supplied" }, "match " + p + "%");
+  }
+
+  function dossier(id, S) {
+    const card = el("div", { class: "panel" });
+    const photo = (id.photos || [])[0];
+    const ph = el("button", { type: "button", class: "d-photo", title: photo ? "Open photo" : "No photo found", text: "👤" });
+    if (photo) {
+      const img = el("img", { src: RT.imgSrc(photo), alt: "profile picture" });
+      img.addEventListener("load", () => ph.replaceChildren(img));
+      ph.addEventListener("click", () => RT.showPhoto({ url: photo, sources: id.records.map((r) => r.platform), group: 0 }));
+    }
+    const head = el("div", { class: "d-head" }, el("h2", { text: (id.names[0] && id.names[0].value) || "Unnamed profile" }),
+      el("div", { class: "d-sub", text: [ (id.headlines[0] || {}).value, (id.locations[0] || {}).value ].filter(Boolean).join(" · ") }));
+    const chips = el("div", { class: "chips" }, scoreChip(id));
+    for (const m of id.matched || []) chips.append(el("span", { class: "chip strong" }, el("span", { class: "k", text: "matches" }), el("span", { text: m })));
+    head.append(chips);
+    const rows = el("div", {});
+    for (const [key, label] of FACT_ROWS) {
+      const facts = id[key];
+      if (!facts || !facts.length) continue;
+      rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: label }), factList(facts, key === "interests" ? 12 : 6, key === "emails" || key === "phones" || key === "usernames")));
+    }
+    if (id.bio) rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "About" }), el("div", { text: RT.clip(id.bio, 600) })));
+    if ((id.documents || []).length) {
+      const box = el("div", { class: "fvals" });
+      for (const d of id.documents) box.append(el("a", { href: RT.safeHref(d) || "#", target: "_blank", rel: "noopener noreferrer", text: d }));
+      rows.append(el("div", { class: "frow" }, el("div", { class: "k", text: "CV / resume" }), box));
+    }
+    const right = el("div", {}, head, el("div", { style: "margin-top:10px" }, rows));
+    card.append(el("div", { class: "dossier" }, ph, right));
+    for (const c of id.conflicts || []) card.append(el("div", { class: "conflict", text: "⚠ " + c }));
+    if ((id.reasons || []).length) {
+      const det = el("details", { style: "margin-top:10px" }, el("summary", { text: "Why these sources are treated as the same person" }));
+      const ul = el("ul", { class: "reasons" });
+      for (const r of id.reasons) ul.append(el("li", { text: r }));
+      det.append(ul);
+      card.append(det);
+    }
+    const recs = el("details", { style: "margin-top:8px" }, el("summary", { text: `Sources (${id.records.length})` }));
+    const chips2 = el("div", { class: "chips", style: "margin-top:8px" });
+    for (const r of id.records) {
+      const href = RT.safeHref(r.url);
+      chips2.append(href ? el("a", { class: "chip", href, target: "_blank", rel: "noopener noreferrer", title: r.source }, el("span", { class: "k", text: r.self ? "own" : "record" }), el("span", { text: r.platform })) : el("span", { class: "chip" }, el("span", { text: r.platform })));
+    }
+    recs.append(chips2);
+    card.append(recs);
+    const act = el("div", { style: "margin-top:10px" });
+    const b = el("button", { type: "button", class: "ghost small", text: "Use these details to search again" });
+    b.title = "Fills the form with this person's name, location, employer, e-mail, account and website";
+    b.addEventListener("click", () => RT.refine(id));
+    act.append(b);
+    card.append(act);
+    return card;
+  }
+
+  function candidate(id, best) {
+    const c = el("div", { class: "cand" + (best ? " best" : "") });
+    const top = el("div", { class: "cand-top" }, el("div", { class: "t", text: id.label }), scoreChip(id));
+    c.append(top);
+    const sub = [];
+    if ((id.employers[0] || {}).value) sub.push("works at " + id.employers[0].value);
+    if ((id.education[0] || {}).value) sub.push("studied at " + id.education[0].value);
+    sub.push(id.records.map((r) => r.platform).join(" · "));
+    c.append(el("div", { class: "muted", text: sub.join(" — ") }));
+    const row = el("div", { class: "chips" });
+    const use = el("button", { type: "button", class: "ghost small", text: "This is the person: search again with these details" });
+    use.addEventListener("click", () => RT.refine(id));
+    const open = el("button", { type: "button", class: "ghost small", text: "Show full profile" });
+    open.addEventListener("click", () => { c.replaceWith(dossier(id)); });
+    row.append(use, open);
+    c.append(row);
+    return c;
+  }
+
+  function identityView() {
+    const S = RT.S, root = $("tab-identity");
+    root.replaceChildren();
+    const all = S.identities || [];
+    const ids = all.filter((i) => !i.weak);
+    const weak = all.filter((i) => i.weak);
+    if (!ids.length && weak.length) { ids.push(...weak.splice(0, 1)); }
+    if (!ids.length) {
+      root.append(el("div", { class: "panel muted", text: S.state === "running"
+        ? "No person profile yet… as soon as collectors return profile data (LinkedIn, ORCID, GitHub, Wikidata, personal sites, CVs) the people they describe appear here, kept apart."
+        : "No person profiles were found. Give a full name plus a location, employer or e-mail, paste a LinkedIn/CV text, or a username, and run again." }));
+      return;
+    }
+    if (S.ambiguity) {
+      root.append(el("div", { class: "id-banner" }, el("b", { text: "Several people match. " }), S.ambiguity,
+        " Their facts are shown separately, never merged, and none of their e-mails or accounts is followed until you choose one."));
+    } else if (S.sameName > 1) {
+      root.append(el("div", { class: "id-banner" }, el("b", { text: `${S.sameName} people share this name. ` }), "The best match is shown first; the others are listed below."));
+    }
+    const top = ids[0];
+    if (top.primary) {
+      root.append(dossier(top, S));
+    } else {
+      root.append(el("p", { class: "hint-line", text: "No single person is a clear match yet. Candidates, best guess first:" }));
+    }
+    const rest = top.primary ? ids.slice(1) : ids;
+    if (rest.length) {
+      const wrap = el("div", { class: "panel" }, el("h3", { text: top.primary ? `Other people matching (${rest.length})` : `Candidates (${rest.length})` }));
+      const list = el("div", { class: "cands" });
+      rest.forEach((id, i) => list.append(candidate(id, !top.primary && i === 0)));
+      wrap.append(list);
+      root.append(wrap);
+    }
+    if (weak.length) {
+      const det = el("details", { class: "panel" }, el("summary", { text: `Accounts that only share the handle (${weak.length}) — probably other people` }),
+        el("p", { class: "hint-line", text: "These accounts have no name and nothing else tying them to your subject. They are shown for completeness and are never followed." }));
+      const chips = el("div", { class: "chips", style: "margin-top:8px" });
+      for (const id of weak) {
+        const r = id.records[0] || {};
+        const href = RT.safeHref(r.url);
+        const label = (id.usernames[0] || {}).value || r.platform;
+        chips.append(href ? el("a", { class: "chip weak", href, target: "_blank", rel: "noopener noreferrer" }, el("span", { class: "k", text: r.platform }), el("span", { text: label })) : el("span", { class: "chip weak", text: label }));
+      }
+      det.append(chips);
+      root.append(det);
+    }
+  }
+
+  RT.views = { identity: identityView, overview, tree, photos, findings, coverage };
 
   RT.resetViews = function resetViews() {
     Object.assign(filterState, { q: "", mod: "", cat: "", conf: 0, limit: 300 });
@@ -454,7 +606,7 @@
     treeOpen.clear();
     treeOpen.add("root");
     SECTIONS.forEach((s) => treeOpen.add("sec:" + s.id));
-    ["tab-overview", "tab-tree", "tab-coverage"].forEach((id) => $(id).replaceChildren());
+    ["tab-identity", "tab-overview", "tab-tree", "tab-coverage"].forEach((id) => $(id).replaceChildren());
     $("rows").replaceChildren();
     if (RT.graph) RT.graph.reset();
   };
