@@ -152,6 +152,10 @@ Sources for a name: ORCID (employments, education, keywords, links), Wikidata (o
 
 `-formats json,csv,txt,html,pdf,graphml,stix,entities,misp,spiderfoot,maltego` (web UI: export buttons). `html` is a single self-contained file with the identity dossier and embedded photos; open it and print to PDF. `graphml` opens in Gephi, yEd and Maltego; `stix` is a STIX 2.1 bundle; `entities` is a CSV of every discovered entity. `pdf` needs Chrome, Chromium or Edge on the machine. `misp`, `spiderfoot` and `maltego` are import files for those tools.
 
+## Which sites know an e-mail address
+
+With an e-mail, the `syswrap` module runs [holehe](https://github.com/megadose/holehe) (installed by `install.sh` through pipx) and reports the sites where that address has an account. holehe works by touching each site's sign-up or password-reset form; it is built not to alert the owner, but it does contact those sites, so run it only on addresses you are entitled to check. Without holehe installed the module says so. Pair it with the `breach` module (which leaks an address appeared in) and Gravatar to see an address's footprint.
+
 ## Cases, comparison and source status
 
 Every finished scan in the web UI is saved as a case (`~/.config/rectool/cases`, or `$RECTOOL_CASES`, files mode 0600). **Saved cases** re-opens one and compares any two runs of a target to show what appeared or disappeared. **Source status** probes the ~23 public services rectool relies on, so a blocked source is not mistaken for "nothing found". On any candidate person, **Compare with best match** shows the two side by side. **📋 Copy page for rectool** is a bookmarklet: you open a profile yourself while logged in, click it, and paste the copied text into the Paste text box; rectool never logs in anywhere.

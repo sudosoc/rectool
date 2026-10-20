@@ -406,6 +406,9 @@ func supports(a, b models.Record) (int, []string) {
 	if domainOverlap(a, b) {
 		what = append(what, "e-mail domain")
 	}
+	if bioSimilar(a.Bio, b.Bio) {
+		what = append(what, "bio text")
+	}
 	// The same handle on two different platforms next to the same name is strong
 	// evidence of one person (it counts double).
 	if sameHandleAcrossPlatforms(a, b) {
@@ -526,4 +529,33 @@ func isWeak(id models.Identity) bool {
 		}
 	}
 	return true
+}
+
+// bioSimilar reports whether two profile descriptions are the same text, or
+// nearly (people paste one bio everywhere): at least eight words and 85%
+// word overlap.
+func bioSimilar(a, b string) bool {
+	wa, wb := words(a), words(b)
+	if len(wa) < 8 || len(wb) < 8 {
+		return false
+	}
+	set := map[string]bool{}
+	for _, w := range wa {
+		set[w] = true
+	}
+	union := len(set)
+	inter := 0
+	seen := map[string]bool{}
+	for _, w := range wb {
+		if seen[w] {
+			continue
+		}
+		seen[w] = true
+		if set[w] {
+			inter++
+		} else {
+			union++
+		}
+	}
+	return float64(inter)/float64(union) >= 0.85
 }

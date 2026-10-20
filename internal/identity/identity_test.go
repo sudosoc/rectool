@@ -258,3 +258,22 @@ func TestMatchNamesTransliteration(t *testing.T) {
 		}
 	}
 }
+
+func TestSameBioAndLocationLinksAccounts(t *testing.T) {
+	bio := "Security engineer and open source maintainer building privacy tools for journalists and activists worldwide"
+	in := []Input{
+		{Rec: models.Record{Platform: "Mastodon", URL: "https://m.example/@jr", Name: "Jane Roe", Bio: bio, Location: "Cairo, Egypt"}},
+		{Rec: models.Record{Platform: "Bluesky", URL: "https://bsky.app/profile/jr2", Name: "Jane Roe", Bio: bio + ".", Location: "Cairo"}},
+		{Rec: models.Record{Platform: "Stack Overflow", URL: "https://so.example/u/9", Name: "Jane Roe", Bio: "Pastry chef from Lyon who loves bread and old cookbooks and travel"}},
+	}
+	res := Resolve(in, Anchors{Name: "Jane Roe"})
+	var linked int
+	for _, id := range res.Identities {
+		if len(id.Records) == 2 {
+			linked++
+		}
+	}
+	if linked != 1 {
+		t.Fatalf("expected the two accounts with the same bio to merge, the third to stay apart: %+v", res.Identities)
+	}
+}

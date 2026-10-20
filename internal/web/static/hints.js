@@ -156,7 +156,7 @@ RT.HINTS = {
     ar: "بيشتغل مع أي مدخل. بيولّد dorks ويسحب نتايج Brave/Bing/DuckDuckGo/Google ببطء. المحركات اللي بتحجب بتتخطى. النتايج دي خيوط محتاجة تأكيد.",
   },
   "mod:syswrap": {
-    en: "Runs installed external tools (whois, dig, theHarvester, subfinder, whatweb, sherlock, maigret, holehe, phoneinfoga) and parses their output. Tools that are not installed are reported, not failed.",
+    en: "Runs installed external tools (whois, dig, theHarvester, subfinder, whatweb, sherlock, maigret, holehe, phoneinfoga) and parses their output. Tools that are not installed are reported, not failed. With an e-mail, holehe tests which sites have an account for that address by touching their sign-up / reset forms (it is built not to notify the owner, but it does contact those sites, so use it only on addresses you are entitled to check).",
     ar: "بيشغّل الأدوات الخارجية المتسطبة (whois وdig وtheHarvester وsubfinder وwhatweb وsherlock وmaigret وholehe وphoneinfoga) وبيحلل ناتجها. الأدوات غير المتسطبة بتتبلّغ بس.",
   },
 };
