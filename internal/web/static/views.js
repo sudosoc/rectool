@@ -469,9 +469,10 @@
   ];
 
   function factBadge(f) {
-    if (f.confirmed) return el("span", { class: "badge-c confirmed", title: "Stated by independent sources: " + (f.sources || []).join(", "), text: "✔ " + f.sources.length + " sources" });
-    if (f.self) return el("span", { class: "badge-c self", title: "Stated in the person's own profile (" + (f.sources || []).join(", ") + ")", text: "self-reported" });
-    return el("span", { class: "badge-c single", title: "One third-party source: " + (f.sources || []).join(", "), text: "1 source" });
+    const tr = f.trust ? " · reliability " + Math.round(f.trust * 100) + "%" : "";
+    if (f.confirmed) return el("span", { class: "badge-c confirmed", title: "Stated by independent sources: " + (f.sources || []).join(", ") + tr, text: "✔ " + f.sources.length + " sources" + (f.trust ? " · " + Math.round(f.trust * 100) + "%" : "") });
+    if (f.self) return el("span", { class: "badge-c self", title: "Stated in the person's own profile (" + (f.sources || []).join(", ") + ")" + tr, text: "self-reported" });
+    return el("span", { class: "badge-c single", title: "One third-party source: " + (f.sources || []).join(", ") + tr, text: "1 source" + (f.trust ? " · " + Math.round(f.trust * 100) + "%" : "") });
   }
 
   function factList(facts, max, mono) {
@@ -652,6 +653,7 @@
       det.append(chips);
       root.append(det);
     }
+    if (S.report && (S.report.timeline || []).length && RT.timelinePanel) root.append(RT.timelinePanel(S.report.timeline));
   }
 
   RT.views = { identity: identityView, overview, tree, photos, findings, coverage };

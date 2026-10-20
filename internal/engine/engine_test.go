@@ -356,3 +356,26 @@ func TestPivotsOnlyFollowTheBestMatchingIdentity(t *testing.T) {
 		t.Fatalf("only the best-matching person's e-mail may be followed, got %+v", foot.seen)
 	}
 }
+
+func TestCloneAndTimeline(t *testing.T) {
+	bio := "Security engineer and open source maintainer building privacy tools for journalists."
+	rep := &models.Report{Findings: []models.Finding{
+		{Module: "people", Source: "a", Status: models.StatusFound, Record: &models.Record{Platform: "GitHub", Name: "Jane Roe", Bio: bio}, Details: map[string]string{"created": "2015-03-02T10:00:00Z"}},
+		{Module: "people", Source: "b", Status: models.StatusFound, Record: &models.Record{Platform: "Gitlab", Name: "Mark Smith", Bio: bio}},
+	}}
+	e := &Engine{}
+	e.cloneStage(rep)
+	found := false
+	for _, f := range rep.Findings {
+		if f.Category == "integrity" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("copied bio under different names not flagged")
+	}
+	e.timelineStage(rep)
+	if len(rep.Timeline) != 1 || rep.Timeline[0].Date != "2015-03-02" {
+		t.Fatalf("timeline: %+v", rep.Timeline)
+	}
+}

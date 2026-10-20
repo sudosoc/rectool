@@ -82,6 +82,7 @@ type Report struct {
 	Identities  []Identity        `json:"identities,omitempty"` // resolved people, best match first
 	Ambiguity   string            `json:"ambiguity,omitempty"`  // set when several people plausibly match
 	Photos      []Photo           `json:"photos,omitempty"`
+	Timeline    []TimelineEvent   `json:"timeline,omitempty"`
 	Geo         *GeoSummary       `json:"geo,omitempty"` // where the subject probably is, with evidence
 	ManualLeads []Lead            `json:"manual_leads,omitempty"`
 	Failures    []Failure         `json:"failures,omitempty"`
@@ -194,4 +195,12 @@ type GeoSummary struct {
 	GivenFit  string       `json:"given_fit,omitempty"` // agrees | differs | unknown
 	TZ        *TZEstimate  `json:"timezone,omitempty"`
 	Notes     []string     `json:"notes,omitempty"`
+}
+
+// TimelineEvent is one dated fact.
+type TimelineEvent struct {
+	Date   string `json:"date"` // YYYY-MM-DD
+	Event  string `json:"event"`
+	Source string `json:"source"`
+	URL    string `json:"url,omitempty"`
 }

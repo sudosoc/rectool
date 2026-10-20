@@ -203,6 +203,11 @@ func (e *Engine) Run(ctx context.Context, t models.Target) (*models.Report, erro
 	e.photoStage(ctx, rep)
 	e.identityStage(rep)
 	e.locationStage(ctx, rep)
+	if e.cfg.Pivot {
+		e.archiveStage(ctx, rep)
+	}
+	e.cloneStage(rep)
+	e.timelineStage(rep)
 	rep.ManualLeads = leads.Build(rep.Target)
 	rep.Interrupted = ctx.Err() != nil
 	rep.FinishedAt = time.Now().UTC()

@@ -166,6 +166,19 @@
     root.append(el("p", { class: "hint-line", text: "Location here comes from what is publicly stated or technically visible, and is shown at city / region precision. IP and phone data describe an ISP or number range, not a person's home. rectool does not search for street addresses." }));
   }
 
+  RT.timelinePanel = function timelinePanel(tl) {
+    const p = el("div", { class: "panel" }, el("h3", { text: `Timeline (${tl.length})` }),
+      el("p", { class: "hint-line", text: "Dated facts from the accounts, archives and files found, oldest first." }));
+    const list = el("div", { class: "timeline" });
+    for (const e of tl) {
+      const href = RT.safeHref(e.url);
+      list.append(el("div", { class: "tl-row" }, el("span", { class: "tl-date", text: e.date }), el("span", { class: "tl-dot" }),
+        el("span", {}, el("b", { text: e.event }), document.createTextNode(" · "), href ? el("a", { href, target: "_blank", rel: "noopener noreferrer", text: e.source }) : document.createTextNode(e.source))));
+    }
+    p.append(list);
+    return p;
+  };
+
   RT.views.location = location;
   window.addEventListener("resize", () => { if (RT.tab === "location") RT.scheduleRender(true); });
 })();

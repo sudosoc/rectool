@@ -115,6 +115,10 @@ RT.HINTS = {
     en: "Needs a username. Reads only the timestamps of the account's public activity on GitHub, Hacker News, Wikipedia, Codeforces, Bluesky, Mastodon and Lichess (only accounts tied to the matched person count) and finds the quietest stretch of the day, assumed to be local night, to estimate the person's timezone. It feeds the Location tab. Weak for shift workers, bots and travellers.",
     ar: "محتاج يوزرنيم. بيقرأ بس توقيتات نشاط الحساب العام على GitHub وHacker News ويدوّر على أهدأ فترة في اليوم (بتتحسب إنها الليل عنده) عشان يقدّر المنطقة الزمنية. بيغذّي تاب Location. ضعيف مع اللي بيشتغل بنظام ورديات أو بوتات أو كتير السفر.",
   },
+  "mod:breach": {
+    en: "Needs an e-mail. Looks the address up in the public XposedOrNot breach index and lists which leaks it appears in, the years and the kinds of data exposed (never the data itself). Useful to see how long an address has been in use and which services the person had accounts with.",
+    ar: "محتاج إيميل. بيدوّر على الإيميل في فهرس XposedOrNot العام للتسريبات وبيعرض أي تسريبات ظهر فيها وسنواتها وأنواع البيانات المتسرّبة (مش البيانات نفسها). مفيد تعرف الإيميل شغال من إمتى وكان له حسابات على أنهي خدمات.",
+  },
   "mod:people": {
     en: "Needs a full name (2+ words), a LinkedIn link or pasted text. Finds candidate profiles (LinkedIn public view when LinkedIn allows it, ORCID, Wikidata, OpenAlex, GitHub, CV documents) and keeps different people with the same name apart.",
     ar: "محتاج اسم كامل (كلمتين أو أكتر) أو رابط LinkedIn أو نص ملصوق. بيجيب بروفايلات مرشحة (LinkedIn العام لو سمح، وORCID وWikidata وOpenAlex وGitHub وملفات CV) وبيفصل الناس اللي بنفس الاسم عن بعض.",

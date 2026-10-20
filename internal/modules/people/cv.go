@@ -2,6 +2,7 @@ package people
 
 import (
 	"context"
+	"github.com/sudosoc/rectool/internal/geo"
 	"net/url"
 	"strings"
 
@@ -74,6 +75,11 @@ func cvFinder(ctx context.Context, c *httpx.Client, s *dorks.Searcher, t models.
 		if len(matched) > 0 {
 			conf = 0.85
 			note = "also matches the supplied " + strings.Join(matched, ", ")
+		}
+		if rec.Location == "" {
+			if ps := geo.PlacesInText(rec.Bio); len(ps) > 0 {
+				rec.Location = ps[0]
+			}
 		}
 		f := finding("CV / resume document", "identity", conf, rec, t)
 		f.Details["verification"] = note

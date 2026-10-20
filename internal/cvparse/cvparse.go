@@ -78,7 +78,7 @@ func Parse(text string) CV {
 
 	for i, l := range lines {
 		if m := locLabel.FindStringSubmatch(l); m != nil {
-			cv.Location = strings.TrimSpace(m[1])
+			cv.Location = coarsePlace(strings.TrimSpace(m[1]))
 			break
 		}
 		if i < 14 && cv.Location == "" && cityLine.MatchString(l) && !looksLikeName(l) && len(strings.Fields(l)) <= 5 {
@@ -199,4 +199,19 @@ func clip(s string, n int) string {
 		return s[:n] + "…"
 	}
 	return s
+}
+
+var streetWord = regexp.MustCompile(`(?i)(^\d|\b(street|st\.|road|rd\.|avenue|ave\.|apt|apartment|floor|building|blvd|lane|ln\.|p\.?o\.? box)\b|شارع|عمارة)`)
+
+// coarsePlace keeps a CV's location at city level: street-level parts of an
+// address ("12 Nile St, Apt 4, Cairo, Egypt") are dropped on purpose.
+func coarsePlace(s string) string {
+	parts := strings.Split(s, ",")
+	var keep []string
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" && !streetWord.MatchString(p) {
+			keep = append(keep, p)
+		}
+	}
+	return strings.Join(keep, ", ")
 }

@@ -290,3 +290,8 @@ details.cand-photos > summary { font-weight: 600; margin-bottom: 8px; }
 .hfill { width: 100%; background: var(--cyan); border-radius: 3px 3px 0 0; opacity: .85; }
 .hbar.quiet .hfill { background: var(--amber); }
 .hbar span { margin-top: 3px; }
+
+.timeline { border-left: 2px solid var(--line2); margin-left: 6px; padding-left: 14px; }
+.tl-row { position: relative; padding: 3px 0; display: flex; gap: 12px; }
+.tl-date { font: 12px var(--mono); color: var(--muted); min-width: 84px; }
+.tl-dot { position: absolute; left: -20px; top: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }

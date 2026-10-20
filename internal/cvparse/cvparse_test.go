@@ -68,3 +68,9 @@ func TestParseNoise(t *testing.T) {
 		t.Errorf("noise produced data: %+v", cv)
 	}
 }
+
+func TestCoarsePlace(t *testing.T) {
+	if got := coarsePlace("12 Nile Street, Apt 4, Cairo, Egypt"); got != "Cairo, Egypt" {
+		t.Fatalf("got %q", got)
+	}
+}

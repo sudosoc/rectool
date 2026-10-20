@@ -47,7 +47,7 @@ func (l *accList) facts() []models.Fact {
 			src = append(src, p)
 		}
 		sort.Strings(src)
-		out = append(out, models.Fact{Value: it.display, Sources: src, Confirmed: len(src) >= 2, Self: it.self})
+		out = append(out, models.Fact{Value: it.display, Sources: src, Confirmed: len(src) >= 2, Self: it.self, Trust: factTrust(src, it.self)})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Confirmed != out[j].Confirmed {

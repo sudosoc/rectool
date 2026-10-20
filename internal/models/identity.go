@@ -31,6 +31,7 @@ type Fact struct {
 	Sources   []string `json:"sources"`             // platforms that state it
 	Confirmed bool     `json:"confirmed,omitempty"` // stated by two or more independent platforms
 	Self      bool     `json:"self,omitempty"`      // at least one source is the person's own profile
+	Trust     float64  `json:"trust,omitempty"`     // 0-1: combined reliability of the sources that state it
 }
 
 // RecordRef points from an identity back to a contributing record.
