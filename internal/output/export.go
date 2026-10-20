@@ -33,12 +33,21 @@ func Export(r *models.Report, dir, base string, formats []string) ([]string, err
 			write = writeCSV
 		case "txt":
 			write = writeTXT
+		case "html":
+			write = writeHTML
+		case "graphml":
+			write = writeGraphML
+		case "stix":
+			write = writeSTIX
+		case "entities":
+			write = writeEntitiesCSV
 		case "":
 			continue
 		default:
-			return paths, fmt.Errorf("unknown format %q (json, csv, txt)", f)
+			return paths, fmt.Errorf("unknown format %q (%s)", f, Formats)
 		}
-		p := filepath.Join(dir, base+"."+f)
+		_, ext, _ := ContentType(f)
+		p := filepath.Join(dir, base+"."+ext)
 		fh, err := os.OpenFile(p, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 		if err != nil {
 			return paths, err
@@ -205,6 +214,38 @@ func Render(w io.Writer, r *models.Report, format string) error {
 		return writeCSV(w, r)
 	case "txt":
 		return writeTXT(w, r)
+	case "html":
+		return writeHTML(w, r)
+	case "graphml":
+		return writeGraphML(w, r)
+	case "stix":
+		return writeSTIX(w, r)
+	case "entities":
+		return writeEntitiesCSV(w, r)
 	}
-	return fmt.Errorf("unknown format %q (json, csv, txt)", format)
+	return fmt.Errorf("unknown format %q (%s)", format, Formats)
+}
+
+// Formats lists the report formats.
+const Formats = "json, csv, txt, html, graphml, stix, entities"
+
+// ContentType returns the MIME type and file extension for a format.
+func ContentType(format string) (mime, ext string, ok bool) {
+	switch strings.ToLower(format) {
+	case "json":
+		return "application/json", "json", true
+	case "csv":
+		return "text/csv", "csv", true
+	case "txt":
+		return "text/plain", "txt", true
+	case "html":
+		return "text/html", "html", true
+	case "graphml":
+		return "application/graphml+xml", "graphml", true
+	case "stix":
+		return "application/stix+json", "stix.json", true
+	case "entities":
+		return "text/csv", "entities.csv", true
+	}
+	return "", "", false
 }

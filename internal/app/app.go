@@ -40,6 +40,7 @@ type Options struct {
 	NoPivot    bool // do not follow discovered emails/domains/IPs/usernames
 	MaxPivots  int
 	PivotDepth int
+	Browser    bool // read LinkedIn public profiles with the local headless browser when HTTP is refused
 	Aggressive bool // maximum coverage: derive usernames, verify hits, deeper/wider pivoting, more dorks
 
 	// social
@@ -93,7 +94,7 @@ func Build(o Options) (*Built, error) {
 
 	eng.Meta = map[string]string{
 		"aggressive": strconv.FormatBool(o.Aggressive), "verify_social": strconv.FormatBool(o.Verify),
-		"proxies": strconv.Itoa(len(o.Proxies)), "wayback": strconv.FormatBool(!o.NoWayback),
+		"browser": strconv.FormatBool(o.Browser), "proxies": strconv.Itoa(len(o.Proxies)), "wayback": strconv.FormatBool(!o.NoWayback),
 	}
 
 	socialMod, err := social.New(social.Config{
@@ -135,7 +136,7 @@ func Build(o Options) (*Built, error) {
 	eng.Register(ip.New())
 	eng.Register(profiles.New())
 	eng.Register(company.New())
-	eng.Register(people.New(people.Config{Searcher: searcher}))
+	eng.Register(people.New(people.Config{Searcher: searcher, Browser: o.Browser}))
 	eng.Register(phone.New())
 	eng.Register(crypto.New())
 	eng.Register(asn.New())

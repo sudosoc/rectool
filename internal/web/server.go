@@ -337,14 +337,13 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	format := strings.ToLower(r.URL.Query().Get("format"))
-	types := map[string]string{"json": "application/json", "csv": "text/csv", "txt": "text/plain"}
-	ct, ok := types[format]
+	ct, ext, ok := output.ContentType(format)
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "format must be json, csv or txt")
+		writeErr(w, http.StatusBadRequest, "format must be one of: "+output.Formats)
 		return
 	}
 	w.Header().Set("Content-Type", ct+"; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="rectool_`+sc.ID+"."+format+`"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="rectool_`+sc.ID+"."+ext+`"`)
 	_ = output.Render(w, rep, format)
 }
 

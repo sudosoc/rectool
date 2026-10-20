@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sudosoc/rectool/internal/browser"
 	"github.com/sudosoc/rectool/internal/extract"
 	"github.com/sudosoc/rectool/internal/httpx"
 	"github.com/sudosoc/rectool/internal/identity"
@@ -25,7 +26,7 @@ import (
 // guesses derived from the name ("first-last", "firstlast"). A guess is
 // accepted only if the page's name matches, so a stranger's profile at the
 // same slug is rejected.
-func linkedIn(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding)) {
+func linkedIn(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding), useBrowser bool) {
 	type target struct {
 		url      string
 		explicit bool
@@ -49,6 +50,14 @@ func linkedIn(ctx context.Context, c *httpx.Client, t models.Target, emit func(m
 	}
 
 	blocked := 0
+	var bin string
+	if useBrowser {
+		var err error
+		if bin, err = browser.Find(); err != nil {
+			emit(errFinding("LinkedIn public profile", err.Error()))
+			useBrowser = false
+		}
+	}
 	for i, tg := range todo {
 		if ctx.Err() != nil {
 			return
@@ -65,10 +74,24 @@ func linkedIn(ctx context.Context, c *httpx.Client, t models.Target, emit func(m
 		if err != nil {
 			continue
 		}
+		body := string(resp.Body)
 		switch resp.StatusCode {
 		case 200:
 			blocked = 0
 		case 999, 429, 403:
+			// The Go client is refused by TLS fingerprint. With -browser, ask the
+			// operator's own real browser for the same public page (default
+			// settings, no login, no stealth). A sign-in wall ends it.
+			if useBrowser {
+				dom, berr := browser.DumpDOM(ctx, bin, tg.url)
+				if berr == nil {
+					body, resp.FinalURL = dom, tg.url
+					blocked = 0
+					break
+				}
+				emit(errFinding("LinkedIn public profile", "headless browser: "+berr.Error()+" ("+tg.url+"). rectool does not log in or solve CAPTCHAs: paste the profile text into the Notes box instead"))
+				return
+			}
 			blocked++
 			if tg.explicit || blocked == 1 {
 				emit(errFinding("LinkedIn public profile", "LinkedIn blocks automated access (HTTP "+itoa(resp.StatusCode)+", "+tg.url+"). rectool does not evade this: open the profile yourself and paste its text into the Notes box, or use the manual link"))
@@ -80,7 +103,6 @@ func linkedIn(ctx context.Context, c *httpx.Client, t models.Target, emit func(m
 		default:
 			continue
 		}
-		body := string(resp.Body)
 		persons := jsonld.Persons(body)
 		if len(persons) == 0 {
 			continue

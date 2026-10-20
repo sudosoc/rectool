@@ -69,6 +69,10 @@ RT.HINTS = {
     en: "Builds likely usernames from the full name (jdoe, john.doe, johnd…) and probes them. Adds many requests and some false positives unless 'Verify' is on.",
     ar: "بيولّد يوزرنيمات محتملة من الاسم الكامل (jdoe وjohn.doe…) ويفحصها. بيزوّد طلبات كتير وممكن نتايج غلط إلا لو 'Verify' شغّال.",
   },
+  browser: {
+    en: "When LinkedIn refuses rectool's own HTTP client, open the same public profile page with the Chrome / Chromium / Edge installed on this machine (headless, logged out, default settings, no stealth). If LinkedIn shows a sign-in wall or CAPTCHA it stops. The public view has name, headline, location, roles, schools, about and photo, but NOT e-mail or CV; for those paste your own logged-in view into the Notes box.",
+    ar: "لو LinkedIn رفض الـHTTP بتاع الأداة، بيفتح نفس صفحة البروفايل العامة بالـChrome/Chromium/Edge المثبت عندك (headless، من غير login، إعدادات عادية، من غير تخفّي). لو ظهر جدار تسجيل دخول أو CAPTCHA بيقف. الصفحة العامة فيها الاسم والعنوان والمكان والوظائف والتعليم والنبذة والصورة، لكن مفيهاش الإيميل ولا الـCV؛ دول الصقهم في خانة Notes من صفحتك وإنت عامل login.",
+  },
   no_pivot: {
     en: "Stops after the first pass. Emails, domains, IPs and usernames that are discovered are listed but not investigated further.",
     ar: "بيوقف بعد الجولة الأولى. الإيميلات والدومينات والـIPs واليوزرنيمات اللي اتلاقت بتتعرض بس من غير ما تتحقق أكتر.",

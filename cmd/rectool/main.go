@@ -26,20 +26,21 @@ func main() { os.Exit(run()) }
 func run() int {
 	def := app.Defaults()
 	var (
-		fullName  = flag.String("n", "", "full name")
-		username  = flag.String("u", "", "username / handle")
-		email     = flag.String("e", "", "email address")
-		phone     = flag.String("p", "", "phone number (international format, e.g. +15551234567)")
-		domain    = flag.String("d", "", "domain, website or social-profile URL")
-		ipAddr    = flag.String("ip", "", "IP address")
-		company   = flag.String("c", "", "company / organisation name")
-		location  = flag.String("l", "", "location (city / country) to focus searches")
-		alias     = flag.String("a", "", "nickname / alias / known-as")
-		asnFlag   = flag.String("asn", "", "autonomous system number, e.g. AS13335")
-		wallet    = flag.String("w", "", "Bitcoin or Ethereum wallet address")
-		notesFile = flag.String("notes-file", "", "file with text to treat as a profile: a CV, a LinkedIn page you copied from your own browser, a bio")
-		aggress   = flag.Bool("aggressive", false, "maximum coverage: derive usernames, verify hits, deeper and wider pivoting, more dorks")
-		depth     = flag.Int("pivot-depth", def.PivotDepth, "rounds of following discovered leads")
+		fullName   = flag.String("n", "", "full name")
+		username   = flag.String("u", "", "username / handle")
+		email      = flag.String("e", "", "email address")
+		phone      = flag.String("p", "", "phone number (international format, e.g. +15551234567)")
+		domain     = flag.String("d", "", "domain, website or social-profile URL")
+		ipAddr     = flag.String("ip", "", "IP address")
+		company    = flag.String("c", "", "company / organisation name")
+		location   = flag.String("l", "", "location (city / country) to focus searches")
+		alias      = flag.String("a", "", "nickname / alias / known-as")
+		asnFlag    = flag.String("asn", "", "autonomous system number, e.g. AS13335")
+		wallet     = flag.String("w", "", "Bitcoin or Ethereum wallet address")
+		notesFile  = flag.String("notes-file", "", "file with text to treat as a profile: a CV, a LinkedIn page you copied from your own browser, a bio")
+		useBrowser = flag.Bool("browser", false, "read LinkedIn public profiles with your installed Chrome/Edge (headless, logged out) when plain HTTP is refused")
+		aggress    = flag.Bool("aggressive", false, "maximum coverage: derive usernames, verify hits, deeper and wider pivoting, more dorks")
+		depth      = flag.Int("pivot-depth", def.PivotDepth, "rounds of following discovered leads")
 
 		webAddr  = flag.String("web", "", "start the web UI on this address instead of scanning (e.g. 127.0.0.1:8080)")
 		webToken = flag.String("web-token", "", "access token for the web UI (default: random, printed at startup)")
@@ -65,7 +66,7 @@ func run() int {
 		maxPivots  = flag.Int("max-pivots", def.MaxPivots, "maximum discovered leads to follow")
 		noWayback  = flag.Bool("no-wayback", false, "skip the Internet Archive query (domain module)")
 		outDir     = flag.String("o", "", "output directory for reports (omit to skip export)")
-		formats    = flag.String("formats", "json,csv,txt", "report formats")
+		formats    = flag.String("formats", "json,csv,txt", "report formats: "+output.Formats)
 		verbose    = flag.Bool("v", false, "keep not-found/error records in exported reports")
 		dorkEngine = flag.String("dork-engines", strings.Join(def.DorkEngines, ","), "search engines for dorking, tried in order")
 		maxDorks   = flag.Int("max-dorks", def.MaxDorks, "maximum dorks to run")
@@ -101,7 +102,7 @@ func run() int {
 	opts := app.Options{
 		Workers: *workers, Timeout: *timeout, Retries: *retries, Proxies: proxyList, Insecure: *insecure, InFlight: *inflight,
 		Modules: splitCSV(*modules), Derive: *derive, KeepAll: *verbose,
-		NoPivot: *noPivot, MaxPivots: *maxPivots, PivotDepth: *depth, NoWayback: *noWayback, Aggressive: *aggress,
+		NoPivot: *noPivot, MaxPivots: *maxPivots, PivotDepth: *depth, NoWayback: *noWayback, Aggressive: *aggress, Browser: *useBrowser,
 		SitesFile: *sitesFile, Categories: splitCSV(*categories), Verify: *verify,
 		DorkEngines: splitCSV(*dorkEngine), DorkDelay: *dorkDelay, MaxDorks: *maxDorks,
 		Tools: splitCSV(*tools), ToolsFile: *toolsFile, ToolTimeout: *toolCap,

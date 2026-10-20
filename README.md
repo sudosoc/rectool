@@ -112,7 +112,7 @@ A pasted **profile link** in the domain field (`-d https://x.com/handle`) is rec
 | `domain` | domain | DNS records; SPF/DMARC/DKIM and mail provider; SaaS used (TXT tokens); RDAP registration and contacts; **subdomains** (crt.sh, certspotter, HackerTarget, TLS SANs) resolved and checked for wildcard DNS; website title/tech/security headers/cookies/tracking IDs; emails, phones and social links on the site; robots.txt, sitemap, security.txt; TLS certificate; Internet Archive URLs; stealer-log exposure counts. |
 | `ip` | IP | Reverse DNS, ASN (Team Cymru via DNS), RDAP, geolocation, ports/CVEs already indexed by Shodan InternetDB (no scanning by rectool), co-hosted domains, TLS certificate and web banner. |
 | `company` | company | Candidate domains (verified against the live page; only the best one is followed), Wikipedia, Wikidata, GitHub organisation. |
-| `people` | full name, LinkedIn link or pasted text | Candidate profiles as structured records for identity resolution: LinkedIn public view (when allowed), ORCID, Wikidata, OpenAlex, GitHub, CV documents, pasted text. |
+| `people` | full name, LinkedIn link or pasted text | Candidate profiles as structured records for identity resolution: LinkedIn public view (when allowed), ORCID, Wikidata, OpenAlex, Crossref authors, Wikipedia, GitHub, Fediverse WebFinger, Wayback snapshots of profile links, CV documents, pasted text. Names match across spellings and scripts (Mohamed / Muhammad / محمد, Bob / Robert). |
 | `footprint` | email or phone | MX, Gravatar profile (name, linked accounts, sites), infostealer exposure (counts/dates only), phone analysis, and web mentions that are verified by fetching each page. |
 | `dorks` | any identifier | Generates dorks from every identifier (site:, filetype:, inurl:, leaks, code, people…) and scrapes Brave / Bing / DuckDuckGo / Google. |
 | `syswrap` | domain, username | Runs `whois`, `dig`, `theHarvester`, `subfinder`, `whatweb`, `sherlock`, `maigret`, `holehe`, `phoneinfoga` and your custom tools through `os/exec` (those installed). |
@@ -139,6 +139,12 @@ Two different accounts on the same platform are never merged by soft evidence (i
 Sources for a name: ORCID (employments, education, keywords, links), Wikidata (occupation, employer, education, cross-platform IDs, photo), OpenAlex (institutions, research topics), GitHub profiles, personal sites (schema.org Person data) and CV/resume PDFs. A CV is accepted only if its *header* carries the person's name (a CV that merely mentions the name is rejected) and is checked against your e-mail, phone, employer, location and handle.
 
 **LinkedIn.** LinkedIn actively blocks automated access (HTTP 999). rectool can read the logged-out public view of a specific profile URL when LinkedIn allows it, slowly and without evading anything, and stops at the first refusal. When LinkedIn refuses, use the manual link, or open the profile yourself and paste its text (or a "Save to PDF" export) into the **Paste text** box (CLI: `-notes-file`); it is parsed into a record and takes part in identity matching. LinkedIn's terms restrict automated access; use this only where you are entitled to.
+
+**`-browser` (opt-in).** If plain HTTP is refused, rectool can open the same logged-out public page with the Chrome / Chromium / Edge installed on your machine (headless, default settings, empty profile; set `RECTOOL_BROWSER` to pick one). It uses no stealth flags, no cookies and no login, and stops at a sign-in wall or CAPTCHA. Whether LinkedIn serves the page depends on your IP and its current rules; in our own test from a home connection it showed the sign-in wall, so treat this as best effort. The public view contains name, headline, location, roles, schools, about and photo; it never contains e-mail or CV, which LinkedIn shows only to logged-in connections. For those, paste your own logged-in view into the Notes box.
+
+## Report formats
+
+`-formats json,csv,txt,html,graphml,stix,entities` (web UI: export buttons). `html` is a single self-contained file with the identity dossier and embedded photos; open it and print to PDF. `graphml` opens in Gephi, yEd and Maltego; `stix` is a STIX 2.1 bundle; `entities` is a CSV of every discovered entity.
 
 ### Pivoting: findings feed each other
 

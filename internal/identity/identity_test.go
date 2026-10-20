@@ -232,3 +232,29 @@ func TestHandleOnlyAccountsAreWeakAndDoNotCauseAmbiguity(t *testing.T) {
 		t.Errorf("expected 3 weak handle-only accounts, got %d", weak)
 	}
 }
+
+func TestMatchNamesTransliteration(t *testing.T) {
+	strong := [][2]string{
+		{"Mohamed Ahmed", "Muhammad Ahmad"},
+		{"محمد أحمد", "Mohammed Ahmed"},
+		{"Abdullah Hassan", "Abd Allah Hasan"},
+		{"Bob Smith", "Robert Smith"},
+		{"Khaled El-Sayed", "Khalid Sayed"},
+		{"عبد الرحمن علي", "Abdelrahman Ali"},
+	}
+	for _, c := range strong {
+		if got := MatchNames(c[0], c[1]); got != NameStrong {
+			t.Errorf("%q ~ %q = %v, want strong", c[0], c[1], got)
+		}
+	}
+	none := [][2]string{
+		{"Mohamed Ahmed", "Mohamed Ali"},
+		{"Bob Smith", "Bill Smith"},
+		{"Hassan Ali", "Hussein Ali"},
+	}
+	for _, c := range none {
+		if got := MatchNames(c[0], c[1]); got == NameStrong {
+			t.Errorf("%q ~ %q = strong, want not strong", c[0], c[1])
+		}
+	}
+}

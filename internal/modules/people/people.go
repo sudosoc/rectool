@@ -27,6 +27,7 @@ import (
 // Config tunes the module.
 type Config struct {
 	Searcher *dorks.Searcher // shared scraper, used by the CV finder; optional
+	Browser  bool            // fall back to the local headless browser when LinkedIn refuses the HTTP client
 }
 
 // Scanner is the people module.
@@ -52,7 +53,7 @@ func hasLinkedIn(t models.Target) bool {
 }
 
 func (s *Scanner) CanRun(t models.Target) bool {
-	return len(strings.Fields(t.FullName)) >= 2 || hasLinkedIn(t) || strings.TrimSpace(t.Notes) != ""
+	return len(strings.Fields(t.FullName)) >= 2 || hasLinkedIn(t) || strings.TrimSpace(t.Username) != "" || len(t.Links) > 0 || strings.TrimSpace(t.Notes) != ""
 }
 
 type job struct {
@@ -62,12 +63,18 @@ type job struct {
 
 func (s *Scanner) Scan(ctx context.Context, t models.Target, d scanner.Deps, emit func(models.Finding)) error {
 	jobs := []job{
-		{"linkedin", linkedIn},
+		{"linkedin", func(ctx context.Context, c *httpx.Client, t models.Target, emit func(models.Finding)) {
+			linkedIn(ctx, c, t, emit, s.cfg.Browser)
+		}},
 		{"orcid", orcid},
 		{"wikidata", wikidata},
 		{"openalex", openAlex},
 		{"github", githubPeople},
 		{"notes", pastedProfile},
+		{"crossref", crossref},
+		{"wikipedia", wikipediaPerson},
+		{"webfinger", webfinger},
+		{"archive", archived},
 	}
 	if s.cfg.Searcher != nil {
 		search := s.cfg.Searcher

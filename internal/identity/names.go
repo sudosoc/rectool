@@ -49,18 +49,24 @@ const (
 // MatchNames compares two personal names, tolerant of order, accents, middle
 // names and initials ("J. Roe" ~ "Jane Roe").
 func MatchNames(a, b string) NameMatch {
-	wa, wb := words(a), words(b)
+	wa, wb := nameTokens(a), nameTokens(b)
 	if len(wa) == 0 || len(wb) == 0 {
 		return NameNone
 	}
 	if len(wa) >= 2 && len(wb) >= 2 {
-		if subset(wa, wb) || subset(wb, wa) {
+		small, big := wa, wb
+		if len(wb) < len(wa) {
+			small, big = wb, wa
+		}
+		if lvl := tokensCover(small, big); lvl == 2 {
 			return NameStrong
+		} else if lvl == 1 {
+			return NamePartial // only a transliteration-skeleton match somewhere
 		}
 		// initial + same last word: "j roe" vs "jane roe"
 		fa, la := wa[0], wa[len(wa)-1]
 		fb, lb := wb[0], wb[len(wb)-1]
-		if la == lb && (len(fa) == 1 && strings.HasPrefix(fb, fa) || len(fb) == 1 && strings.HasPrefix(fa, fb)) {
+		if tokenLevel(la, lb) == 2 && (len(fa) == 1 && strings.HasPrefix(fb, fa) || len(fb) == 1 && strings.HasPrefix(fa, fb)) {
 			return NamePartial
 		}
 		return NameNone
@@ -72,12 +78,38 @@ func MatchNames(a, b string) NameMatch {
 	}
 	if len(short) == 1 && len(short[0]) >= 4 {
 		for _, w := range long {
-			if w == short[0] {
+			if tokenLevel(w, short[0]) >= 1 {
 				return NamePartial
 			}
 		}
 	}
 	return NameNone
+}
+
+// tokensCover reports how well every word of small is found in big:
+// 2 all match strongly, 1 all match but some only by skeleton, 0 otherwise.
+func tokensCover(small, big []string) int {
+	used := make([]bool, len(big))
+	worst := 2
+	for _, w := range small {
+		best, at := 0, -1
+		for i, x := range big {
+			if used[i] {
+				continue
+			}
+			if l := tokenLevel(w, x); l > best {
+				best, at = l, i
+			}
+		}
+		if best == 0 {
+			return 0
+		}
+		used[at] = true
+		if best < worst {
+			worst = best
+		}
+	}
+	return worst
 }
 
 func subset(small, big []string) bool {

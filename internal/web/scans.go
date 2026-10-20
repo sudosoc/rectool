@@ -143,6 +143,7 @@ type ScanRequest struct {
 	Wallet     string   `json:"wallet"`
 	Modules    []string `json:"modules"`
 	Aggressive bool     `json:"aggressive"`
+	Browser    bool     `json:"browser"`
 	Verify     bool     `json:"verify"`
 	Derive     bool     `json:"derive"`
 	NoPivot    bool     `json:"no_pivot"`
@@ -239,6 +240,7 @@ func (m *manager) start(req ScanRequest) (*scan, error) {
 	opts.Derive = req.Derive
 	opts.NoPivot = req.NoPivot
 	opts.Aggressive = req.Aggressive
+	opts.Browser = req.Browser
 	if len(req.Proxies) > 0 {
 		opts.Proxies = req.Proxies
 	}

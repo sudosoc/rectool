@@ -129,6 +129,7 @@ RT.buildForm = function buildForm(info) {
     check("verify", "Verify social hits", "canary test removes false positives", false),
     check("derive", "Derive usernames from the name", "jdoe, john.doe, johnd…", false),
     check("no_pivot", "Don't follow discovered leads", "first pass only", false),
+    check("browser", "Use local browser for LinkedIn", "headless Chrome/Edge, logged-out view", false),
   );
   $("proxiesInfo").replaceChildren(" ", RT.infoBtn("proxies"));
 
@@ -169,7 +170,7 @@ RT.bindForm = function bindForm() {
       domain: v("domain"), ip: v("ip"), asn: v("asn"), wallet: v("wallet"), company: v("company"), location: v("location"), notes: v("notes"),
       modules: chosen.length === mods.length ? [] : chosen,
       aggressive: f.elements["aggressive"].checked, verify: f.elements["verify"].checked,
-      derive: f.elements["derive"].checked, no_pivot: f.elements["no_pivot"].checked,
+      derive: f.elements["derive"].checked, browser: f.elements["browser"].checked, no_pivot: f.elements["no_pivot"].checked,
       proxies: f.elements["proxies"].value.split("\n").map((s) => s.trim()).filter(Boolean),
     };
     $("startBtn").disabled = true;
@@ -311,6 +312,10 @@ RT.onDone = function onDone(rep) {
   $("expJson").href = `/api/scans/${id}/export?format=json`;
   $("expCsv").href = `/api/scans/${id}/export?format=csv`;
   $("expTxt").href = `/api/scans/${id}/export?format=txt`;
+  $("expHtml").href = `/api/scans/${id}/export?format=html`;
+  $("expGraphml").href = `/api/scans/${id}/export?format=graphml`;
+  $("expStix").href = `/api/scans/${id}/export?format=stix`;
+  $("expEntities").href = `/api/scans/${id}/export?format=entities`;
   $("exports").hidden = false;
   if (!rep.interrupted) {
     $("overallFill").style.width = "100%";

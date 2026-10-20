@@ -152,6 +152,9 @@ func (c *cache) put(img *Image) {
 	}
 }
 
+// Cached returns an already downloaded picture, or nil. It never fetches.
+func Cached(rawURL string) *Image { return shared.get(rawURL) }
+
 // ------------------------------------------------------------------ fetch
 
 // Fetch downloads rawURL (following at most three redirects, re-validating each
