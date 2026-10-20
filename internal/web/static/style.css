@@ -277,3 +277,16 @@ textarea.notes { min-height: 90px; }
 .tile.candidate { opacity: .92; border-style: dashed; }
 details.cand-photos { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
 details.cand-photos > summary { font-weight: 600; margin-bottom: 8px; }
+
+.loc-head .loc-main { font-size: 26px; margin: 2px 0 8px; letter-spacing: 0; }
+.locmap { width: 100%; display: block; border: 1px solid var(--line); border-radius: 8px; }
+.ldot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; }
+.ok-line { color: var(--accent); margin-top: 6px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tbl th { text-align: left; color: var(--faint); font-weight: 600; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.hours { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; height: 110px; align-items: end; margin-top: 8px; }
+.hbar { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; font-size: 9.5px; color: var(--faint); }
+.hfill { width: 100%; background: var(--cyan); border-radius: 3px 3px 0 0; opacity: .85; }
+.hbar.quiet .hfill { background: var(--amber); }
+.hbar span { margin-top: 3px; }

@@ -202,6 +202,7 @@ func (e *Engine) Run(ctx context.Context, t models.Target) (*models.Report, erro
 	rep.Entities = collectEntities(rep)
 	e.photoStage(ctx, rep)
 	e.identityStage(rep)
+	e.locationStage(ctx, rep)
 	rep.ManualLeads = leads.Build(rep.Target)
 	rep.Interrupted = ctx.Err() != nil
 	rep.FinishedAt = time.Now().UTC()

@@ -662,7 +662,7 @@
     treeOpen.clear();
     treeOpen.add("root");
     SECTIONS.forEach((s) => treeOpen.add("sec:" + s.id));
-    ["tab-identity", "tab-overview", "tab-tree", "tab-coverage"].forEach((id) => $(id).replaceChildren());
+    ["tab-identity", "tab-overview", "tab-tree", "tab-coverage", "tab-location"].forEach((id) => $(id).replaceChildren());
     $("rows").replaceChildren();
     if (RT.graph) RT.graph.reset();
   };

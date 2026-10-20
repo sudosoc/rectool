@@ -68,6 +68,21 @@ func TestLiveAudit(t *testing.T) {
 	for _, p := range rep.Photos {
 		t.Logf("photo group=%d %dx%d %s <- %s", p.Group, p.Width, p.Height, p.URL, strings.Join(p.Sources, " | "))
 	}
+	if g := rep.Geo; g != nil {
+		t.Logf("GEO consensus=%q conflict=%q given=%q fit=%s", g.Consensus, g.Conflict, g.Given, g.GivenFit)
+		for _, p := range g.Points {
+			t.Logf("  point %-14s %-9s w=%.2f %s -> %.3f,%.3f %s", p.Kind, p.Precision, p.Weight, p.Label, p.Lat, p.Lon, p.Country)
+		}
+		for _, c := range g.Clusters {
+			t.Logf("  cluster %.2f %s kinds=%v", c.Score, c.Label, c.Kinds)
+		}
+		if g.TZ != nil {
+			t.Logf("  tz %s conf=%.2f events=%d %v", g.TZ.Label, g.TZ.Confidence, g.TZ.Events, g.TZ.Regions)
+		}
+		for _, n := range g.Notes {
+			t.Logf("  note: %s", n)
+		}
+	}
 	t.Logf("ambiguity: %q", rep.Ambiguity)
 	for _, id := range rep.Identities {
 		var plats []string

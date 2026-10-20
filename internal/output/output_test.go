@@ -19,6 +19,7 @@ func sample() *models.Report {
 			{Type: models.EntDomain, Value: "example.com"}, {Type: models.EntUsername, Value: "jroe"}},
 		Findings: []models.Finding{{Module: "people", Source: "ORCID", Category: "person", URL: "javascript:alert(1)", Status: models.StatusFound,
 			Confidence: 0.8, Details: map[string]string{"name": "<script>alert(1)</script>"}}},
+		Geo: &models.GeoSummary{Consensus: "Cairo, Egypt (90%)", Points: []models.GeoPoint{{Label: "<b>Cairo</b>", Kind: "self-declared", Precision: "city", Weight: 0.7}}},
 		Identities: []models.Identity{{ID: 1, Label: "Jane Roe", Score: 0.9, Primary: true,
 			Emails: []models.Fact{{Value: "jane@example.com", Sources: []string{"Gravatar"}, Confirmed: true}},
 			Docs:   []string{"javascript:alert(2)"}}},

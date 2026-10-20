@@ -152,6 +152,7 @@ func safeURL(u string) string {
 var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 	"safe": safeURL,
 	"join": strings.Join,
+	"pct":  func(f float64) int { return int(f*100 + 0.5) },
 }).Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -193,6 +194,11 @@ a{color:var(--acc);word-break:break-all}code{font-size:12px;word-break:break-all
 <tr><th>Sources</th><td>{{range .Records}}<div class="fact">{{if safe .URL}}<a href="{{safe .URL}}">{{.Platform}}</a>{{else}}{{.Platform}}{{end}}{{if .Self}} <span class="src">own profile</span>{{end}}</div>{{end}}</td></tr>
 </table></div>
 {{end}}{{else}}<div class="mut">No person could be resolved from the data.</div>{{end}}
+
+{{if .R.Geo}}<h2>Location</h2><div class="card">{{if .R.Geo.Consensus}}<b>Most likely: {{.R.Geo.Consensus}}</b>{{end}}
+{{if .R.Geo.Conflict}}<div class="warn">{{.R.Geo.Conflict}}</div>{{end}}
+{{if .R.Geo.TZ}}<div class="mut">Timezone from activity hours: {{.R.Geo.TZ.Label}} ({{.R.Geo.TZ.Events}} events)</div>{{end}}
+<table>{{range .R.Geo.Points}}<tr><th>{{.Kind}}</th><td>{{.Label}} <span class="src">→ {{.City}} {{.Region}} {{.Country}} · {{.Precision}} · trust {{pct .Weight}}%</span></td></tr>{{end}}</table></div>{{end}}
 
 {{if .Gallery}}<h2>Pictures</h2><div>{{range .Gallery}}<div class="gal"><img src="{{.Src}}" alt=""><br>{{.Sources}}{{if .Group}}<br>same picture group {{.Group}}{{end}}</div>{{end}}</div>{{end}}
 

@@ -102,6 +102,7 @@
         <button class="tab" role="tab" data-tab="overview" aria-selected="false">Overview</button>
         <button class="tab" role="tab" data-tab="tree" aria-selected="false">Intelligence tree</button>
         <button class="tab" role="tab" data-tab="graph" aria-selected="false">Relationship graph</button>
+        <button class="tab" role="tab" data-tab="location" aria-selected="false">Location <span id="locCount" class="count" hidden>0</span></button>
         <button class="tab" role="tab" data-tab="photos" aria-selected="false">Photos <span id="photoCount" class="count">0</span></button>
         <button class="tab" role="tab" data-tab="findings" aria-selected="false">Findings <span id="tabCount" class="count">0</span></button>
         <button class="tab" role="tab" data-tab="coverage" aria-selected="false">Coverage &amp; integrity <span id="gapCount" class="count warn" hidden>0</span></button>
@@ -119,6 +120,7 @@
         <div class="graph-wrap"><canvas id="graph" aria-label="Relationship graph of discovered entities"></canvas><div id="graphTip" class="graph-tip" hidden></div></div>
         <p class="hint-line">Edges show where a lead came from: the subject → what the first pass found → what following those leads found. Drag to pan, wheel to zoom, click a node for details.</p>
       </div>
+      <div id="tab-location" class="tabpanel" hidden></div>
       <div id="tab-photos" class="tabpanel" hidden></div>
       <div id="tab-findings" class="tabpanel" hidden>
         <div class="tablehead">
@@ -151,6 +153,7 @@
 <script src="/app.js"></script>
 <script src="/views.js"></script>
 <script src="/graph.js"></script>
+<script src="/location.js"></script>
 <script src="/boot.js"></script>
 </body>
 </html>

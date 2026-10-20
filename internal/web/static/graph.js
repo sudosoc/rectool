@@ -16,7 +16,7 @@
   const INPUT_TYPE = { full_name: "name", username: "username", alias: "username", email: "email", phone: "phone", domain: "domain", ip: "ip", asn: "asn", wallet: "wallet", company: "organisation", location: "location" };
   const MODULE_INPUT = {
     social: ["username"], profiles: ["username"], footprint: ["email", "phone"], phone: ["phone"], domain: ["domain"], ip: ["ip"],
-    asn: ["asn"], company: ["organisation"], people: ["name"], images: ["name", "username"], crypto: ["wallet"], syswrap: ["domain", "username"], dorks: [],
+    asn: ["asn"], company: ["organisation"], people: ["name"], images: ["name", "username"], activity: ["username"], crypto: ["wallet"], syswrap: ["domain", "username"], dorks: [],
   };
   const MAX_NODES = 260;
 

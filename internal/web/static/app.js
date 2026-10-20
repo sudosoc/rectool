@@ -96,10 +96,10 @@ RT.FIELDS = [
   ] },
 ];
 RT.MODULE_NEEDS = {
-  social: "username", profiles: "username", domain: "domain", ip: "IP", asn: "ASN", company: "company", people: "full name", images: "name or username",
+  social: "username", profiles: "username", domain: "domain", ip: "IP", asn: "ASN", company: "company", people: "full name", images: "name or username", activity: "username",
   footprint: "e-mail / phone", phone: "phone", crypto: "wallet", dorks: "anything", syswrap: "domain / username",
 };
-RT.MODULE_ORDER = ["social", "profiles", "footprint", "phone", "domain", "ip", "asn", "company", "people", "images", "crypto", "dorks", "syswrap"];
+RT.MODULE_ORDER = ["social", "profiles", "footprint", "phone", "domain", "ip", "asn", "company", "people", "images", "activity", "crypto", "dorks", "syswrap"];
 
 RT.buildForm = function buildForm(info) {
   const fields = $("fields");
@@ -359,6 +359,9 @@ RT.render = function render() {
   $("photoCount").textContent = String(RT.photoList().length);
   $("idCount").textContent = String((RT.S.identities || []).length);
   const gaps = RT.S.report ? (RT.S.report.failures || []).length : 0;
+  const lg = RT.S.report && RT.S.report.geo;
+  $("locCount").hidden = !lg;
+  if (lg) $("locCount").textContent = String((lg.points || []).length);
   $("gapCount").hidden = gaps === 0;
   $("gapCount").textContent = String(gaps);
   const v = RT.views;
@@ -368,6 +371,7 @@ RT.render = function render() {
   else if (RT.tab === "tree") v.tree();
   else if (RT.tab === "graph") RT.graph && RT.graph.update();
   else if (RT.tab === "photos") v.photos();
+  else if (RT.tab === "location") v.location && v.location();
   else if (RT.tab === "findings") v.findings();
   else if (RT.tab === "coverage") v.coverage();
 };

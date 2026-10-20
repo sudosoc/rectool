@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/rwcarlsen/goexif/exif"
 	"image"
 	"image/color"
 	_ "image/gif"  // register decoders
@@ -46,6 +47,13 @@ type Image struct {
 	DHash       uint64 // 0 when the format could not be decoded (SVG, ICO…)
 	Hashed      bool
 	Data        []byte
+
+	// EXIF metadata, present only when the file still carries it (most
+	// platforms strip it on upload; personal sites and CV photos often do not).
+	HasGPS   bool
+	Lat, Lon float64
+	Taken    string
+	Camera   string
 }
 
 // DHashHex renders the perceptual hash.
@@ -229,7 +237,34 @@ func analyse(rawURL string, data []byte, declared string) (*Image, error) {
 			img.DHash, img.Hashed = dhash(m), true
 		}
 	}
+	readEXIF(img)
 	return img, nil
+}
+
+// readEXIF fills GPS position, capture time and camera model when present.
+func readEXIF(img *Image) {
+	if img.ContentType != "image/jpeg" && img.ContentType != "image/tiff" {
+		return
+	}
+	x, err := exif.Decode(bytes.NewReader(img.Data))
+	if err != nil {
+		return
+	}
+	if lat, lon, err := x.LatLong(); err == nil && !(lat == 0 && lon == 0) {
+		img.HasGPS, img.Lat, img.Lon = true, lat, lon
+	}
+	if t, err := x.DateTime(); err == nil {
+		img.Taken = t.Format("2006-01-02 15:04:05")
+	}
+	var parts []string
+	for _, f := range []exif.FieldName{exif.Make, exif.Model} {
+		if tg, err := x.Get(f); err == nil {
+			if v, err := tg.StringVal(); err == nil && strings.TrimSpace(v) != "" {
+				parts = append(parts, strings.TrimSpace(v))
+			}
+		}
+	}
+	img.Camera = strings.Join(parts, " ")
 }
 
 // dhash is the classic difference hash: shrink to 9x8 luminance cells and

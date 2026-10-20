@@ -111,6 +111,10 @@ RT.HINTS = {
     en: "Hunts for pictures of the subject: avatars of the username on ~18 services (through the public resolver unavatar.io, which receives the handle) and web image search for the quoted name, keeping only results whose page title contains the name. Results are shown as UNVERIFIED candidates: a handle or a common name can belong to someone else.",
     ar: "بيدوّر على صور الشخص: صور اليوزرنيم على حوالي 18 خدمة (عن طريق unavatar.io اللي بيستلم اليوزرنيم) وبحث صور على الويب بالاسم بين علامتين تنصيص، وبيسيب بس النتايج اللي عنوان صفحتها فيه الاسم. النتايج بتظهر كمرشّحين غير مؤكدين: اليوزرنيم أو الاسم الشائع ممكن يكون لحد تاني.",
   },
+  "mod:activity": {
+    en: "Needs a username. Reads only the timestamps of the account's public GitHub events and Hacker News posts and finds the quietest stretch of the day, assumed to be local night, to estimate the person's timezone. It feeds the Location tab. Weak for shift workers, bots and travellers.",
+    ar: "محتاج يوزرنيم. بيقرأ بس توقيتات نشاط الحساب العام على GitHub وHacker News ويدوّر على أهدأ فترة في اليوم (بتتحسب إنها الليل عنده) عشان يقدّر المنطقة الزمنية. بيغذّي تاب Location. ضعيف مع اللي بيشتغل بنظام ورديات أو بوتات أو كتير السفر.",
+  },
   "mod:people": {
     en: "Needs a full name (2+ words), a LinkedIn link or pasted text. Finds candidate profiles (LinkedIn public view when LinkedIn allows it, ORCID, Wikidata, OpenAlex, GitHub, CV documents) and keeps different people with the same name apart.",
     ar: "محتاج اسم كامل (كلمتين أو أكتر) أو رابط LinkedIn أو نص ملصوق. بيجيب بروفايلات مرشحة (LinkedIn العام لو سمح، وORCID وWikidata وOpenAlex وGitHub وملفات CV) وبيفصل الناس اللي بنفس الاسم عن بعض.",

@@ -82,6 +82,7 @@ type Report struct {
 	Identities  []Identity        `json:"identities,omitempty"` // resolved people, best match first
 	Ambiguity   string            `json:"ambiguity,omitempty"`  // set when several people plausibly match
 	Photos      []Photo           `json:"photos,omitempty"`
+	Geo         *GeoSummary       `json:"geo,omitempty"` // where the subject probably is, with evidence
 	ManualLeads []Lead            `json:"manual_leads,omitempty"`
 	Failures    []Failure         `json:"failures,omitempty"`
 	Settings    map[string]string `json:"settings,omitempty"` // how the run was configured, for reproducibility
@@ -128,6 +129,9 @@ type Photo struct {
 	Height      int      `json:"height"`
 	SHA256      string   `json:"sha256"`
 	DHash       string   `json:"dhash,omitempty"`
+	GPS         string   `json:"gps,omitempty"`    // "lat,lon" read from the file's EXIF
+	Taken       string   `json:"taken,omitempty"`  // EXIF capture time
+	Camera      string   `json:"camera,omitempty"` // EXIF make and model
 	Group       int      `json:"group,omitempty"`
 	Error       string   `json:"error,omitempty"`
 }
@@ -139,4 +143,55 @@ type Lead struct {
 	Label string `json:"label"`
 	URL   string `json:"url"`
 	Why   string `json:"why"`
+}
+
+// GeoPoint is one piece of location evidence, geocoded.
+type GeoPoint struct {
+	Label       string   `json:"label"`   // text as found, e.g. "Cairo, Egypt"
+	Kind        string   `json:"kind"`    // self-declared | organisation | ip | phone | exif | activity | given
+	Sources     []string `json:"sources"` // where it was stated
+	Lat         float64  `json:"lat"`
+	Lon         float64  `json:"lon"`
+	Place       string   `json:"place,omitempty"` // geocoder's canonical name
+	City        string   `json:"city,omitempty"`
+	Region      string   `json:"region,omitempty"`
+	Country     string   `json:"country,omitempty"`
+	CountryCode string   `json:"country_code,omitempty"`
+	Precision   string   `json:"precision"` // exact | city | region | country
+	Weight      float64  `json:"weight"`    // how much this kind of evidence is trusted
+}
+
+// GeoCluster groups evidence that points to the same place.
+type GeoCluster struct {
+	Label       string   `json:"label"`
+	Lat         float64  `json:"lat"`
+	Lon         float64  `json:"lon"`
+	Country     string   `json:"country,omitempty"`
+	CountryCode string   `json:"country_code,omitempty"`
+	Score       float64  `json:"score"`  // 0-1, noisy-OR of its evidence weights
+	Kinds       []string `json:"kinds"`  // evidence types that support it
+	Points      []int    `json:"points"` // indexes into GeoSummary.Points
+}
+
+// TZEstimate is a timezone guessed from when the subject is active online.
+type TZEstimate struct {
+	Offset     float64  `json:"utc_offset"`
+	Label      string   `json:"label"` // "UTC+02:00"
+	Confidence float64  `json:"confidence"`
+	Events     int      `json:"events"`
+	Hours      [24]int  `json:"hours_utc"` // activity histogram by UTC hour
+	Regions    []string `json:"regions,omitempty"`
+	Sources    []string `json:"sources,omitempty"`
+}
+
+// GeoSummary is the location analysis of a report.
+type GeoSummary struct {
+	Points    []GeoPoint   `json:"points"`
+	Clusters  []GeoCluster `json:"clusters"`
+	Consensus string       `json:"consensus,omitempty"` // best-supported place
+	Conflict  string       `json:"conflict,omitempty"`  // set when evidence disagrees
+	Given     string       `json:"given,omitempty"`     // the location the operator supplied
+	GivenFit  string       `json:"given_fit,omitempty"` // agrees | differs | unknown
+	TZ        *TZEstimate  `json:"timezone,omitempty"`
+	Notes     []string     `json:"notes,omitempty"`
 }

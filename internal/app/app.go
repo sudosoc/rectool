@@ -11,6 +11,7 @@ import (
 
 	"github.com/sudosoc/rectool/internal/engine"
 	"github.com/sudosoc/rectool/internal/httpx"
+	"github.com/sudosoc/rectool/internal/modules/activity"
 	"github.com/sudosoc/rectool/internal/modules/asn"
 	"github.com/sudosoc/rectool/internal/modules/company"
 	"github.com/sudosoc/rectool/internal/modules/crypto"
@@ -139,6 +140,7 @@ func Build(o Options) (*Built, error) {
 	eng.Register(company.New())
 	eng.Register(people.New(people.Config{Searcher: searcher, Browser: o.Browser}))
 	eng.Register(images.New())
+	eng.Register(activity.New())
 	eng.Register(phone.New())
 	eng.Register(crypto.New())
 	eng.Register(asn.New())
