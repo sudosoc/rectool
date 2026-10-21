@@ -271,6 +271,7 @@ func stackExchange(ctx context.Context, c *httpx.Client, t models.Target, emit f
 		if u.Website != "" {
 			rec.Websites = []string{u.Website}
 		}
+		rec.Interests = stackNetwork(ctx, c, u.AccountID)
 		emit(finding("Stack Overflow member", "person", 0.45, rec, t))
 	}
 }

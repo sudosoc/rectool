@@ -33,6 +33,10 @@ func TestLiveAudit(t *testing.T) {
 		Domain: env("RECTOOL_LIVE_DOMAIN", ""), FullName: env("RECTOOL_LIVE_NAME", "Linus Torvalds"),
 		Company: env("RECTOOL_LIVE_COMPANY", ""), Location: env("RECTOOL_LIVE_LOCATION", ""),
 	}
+	if os.Getenv("RECTOOL_LIVE_BLANK") == "1" { // only what RECTOOL_LIVE_* explicitly sets
+		tg = models.Target{Username: os.Getenv("RECTOOL_LIVE_USER"), Email: os.Getenv("RECTOOL_LIVE_EMAIL"), Domain: os.Getenv("RECTOOL_LIVE_DOMAIN"),
+			FullName: os.Getenv("RECTOOL_LIVE_NAME"), Company: os.Getenv("RECTOOL_LIVE_COMPANY"), Location: os.Getenv("RECTOOL_LIVE_LOCATION")}
+	}
 	if os.Getenv("RECTOOL_LIVE_NOUSER") == "1" {
 		tg.Username, tg.Email = "", ""
 	}
@@ -61,6 +65,13 @@ func TestLiveAudit(t *testing.T) {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	if os.Getenv("RECTOOL_LIVE_SOURCES") == "1" {
+		for _, f := range rep.Findings {
+			if f.Module != "social" && f.Status != models.StatusNotFound {
+				t.Logf("SRC %s/%s [%s] %s", f.Module, f.Source, f.Status, f.Details["error"])
+			}
+		}
+	}
 	t.Logf("findings=%d entities=%d photos=%d failures=%d leads=%d", len(rep.Findings), len(rep.Entities), len(rep.Photos), len(rep.Failures), len(rep.ManualLeads))
 	for _, k := range keys {
 		t.Logf("  %-32s %d", k, cats[k])
