@@ -13,6 +13,7 @@ import (
 	"github.com/sudosoc/rectool/internal/httpx"
 	"github.com/sudosoc/rectool/internal/modules/activity"
 	"github.com/sudosoc/rectool/internal/modules/asn"
+	"github.com/sudosoc/rectool/internal/modules/bizreg"
 	"github.com/sudosoc/rectool/internal/modules/breach"
 	"github.com/sudosoc/rectool/internal/modules/company"
 	"github.com/sudosoc/rectool/internal/modules/crypto"
@@ -28,6 +29,7 @@ import (
 	"github.com/sudosoc/rectool/internal/modules/phone"
 	"github.com/sudosoc/rectool/internal/modules/profiles"
 	"github.com/sudosoc/rectool/internal/modules/records"
+	"github.com/sudosoc/rectool/internal/modules/sitefiles"
 	"github.com/sudosoc/rectool/internal/modules/social"
 	"github.com/sudosoc/rectool/internal/modules/syswrap"
 )
@@ -146,6 +148,8 @@ func Build(o Options) (*Built, error) {
 	eng.Register(people.New(people.Config{Searcher: searcher, Browser: o.Browser}))
 	eng.Register(images.New())
 	eng.Register(breach.New())
+	eng.Register(sitefiles.New())
+	eng.Register(bizreg.New())
 	eng.Register(mentions.New())
 	eng.Register(devtrace.New())
 	eng.Register(docmeta.New())

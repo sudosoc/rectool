@@ -119,6 +119,14 @@ RT.HINTS = {
     en: "Needs an e-mail. Looks the address up in the public XposedOrNot breach index and lists which leaks it appears in, the years and the kinds of data exposed (never the data itself). Useful to see how long an address has been in use and which services the person had accounts with.",
     ar: "محتاج إيميل. بيدوّر على الإيميل في فهرس XposedOrNot العام للتسريبات وبيعرض أي تسريبات ظهر فيها وسنواتها وأنواع البيانات المتسرّبة (مش البيانات نفسها). مفيد تعرف الإيميل شغال من إمتى وكان له حسابات على أنهي خدمات.",
   },
+  "mod:sitefiles": {
+    en: "Needs a domain. Reads what a website publishes about itself and its people: humans.txt (credits and contacts), ads.txt (advertising accounts that link a site to its owner and sister sites), the public WordPress author list (names and login slugs) and RSS / Atom feed authors.",
+    ar: "محتاج دومين. بيقرأ اللي الموقع بينشره عن نفسه وعن ناسه: humans.txt (أسماء الفريق والتواصل)، وads.txt (حسابات الإعلانات اللي بتربط الموقع بصاحبه ومواقعه التانية)، وقايمة كتّاب WordPress العامة (الأسماء وأسماء الدخول)، وكتّاب خلاصات RSS/Atom.",
+  },
+  "mod:bizreg": {
+    en: "Needs a company name. Queries official business registers with open APIs (France and Norway): registration number, address, activity, size, founding date and, for France, the named officers. Results are for similar names too, so check the number and address.",
+    ar: "محتاج اسم شركة. بيسأل سجلات الشركات الرسمية اللي ليها API مفتوح (فرنسا والنرويج): رقم التسجيل والعنوان والنشاط والحجم وتاريخ التأسيس، وفي فرنسا أسماء المسؤولين. بيطلّع كمان شركات بأسماء مشابهة فراجع الرقم والعنوان.",
+  },
   "mod:mentions": {
     en: "Needs a full name. Searches the open GDELT news index for articles from roughly the last year whose headline names the person. Because a name is not an identity, each headline is checked against your company, place or e-mail domain: matches are marked with a tick, the rest stay unverified. It covers press mentions only, so many private people return nothing.",
     ar: "محتاج اسم كامل. بيدوّر في فهرس GDELT المفتوح للأخبار عن مقالات آخر سنة تقريباً عنوانها فيه اسم الشخص. وعشان الاسم مش هوية، كل عنوان بيتقارن بالشركة أو المكان أو دومين الإيميل اللي دخلتهم: المطابق بيتعلّم بعلامة صح والباقي يفضل غير مؤكد. بيغطي الأخبار بس، فناس كتير عاديين مش هتطلع لهم نتايج.",

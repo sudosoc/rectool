@@ -96,10 +96,10 @@ RT.FIELDS = [
   ] },
 ];
 RT.MODULE_NEEDS = {
-  social: "username", profiles: "username", domain: "domain", ip: "IP", asn: "ASN", company: "company", people: "full name", images: "name or username", activity: "username", breach: "e-mail", devtrace: "username or e-mail", mentions: "full name", docmeta: "domain", records: "name, domain or IP",
+  social: "username", profiles: "username", domain: "domain", ip: "IP", asn: "ASN", company: "company", people: "full name", images: "name or username", activity: "username", breach: "e-mail", sitefiles: "domain", bizreg: "company", devtrace: "username or e-mail", mentions: "full name", docmeta: "domain", records: "name, domain or IP",
   footprint: "e-mail / phone", phone: "phone", crypto: "wallet", dorks: "anything", syswrap: "domain / username",
 };
-RT.MODULE_ORDER = ["social", "profiles", "footprint", "phone", "domain", "ip", "asn", "company", "people", "images", "activity", "breach", "mentions", "devtrace", "docmeta", "records", "crypto", "dorks", "syswrap"];
+RT.MODULE_ORDER = ["social", "profiles", "footprint", "phone", "domain", "ip", "asn", "company", "people", "images", "activity", "breach", "sitefiles", "bizreg", "mentions", "devtrace", "docmeta", "records", "crypto", "dorks", "syswrap"];
 
 RT.buildForm = function buildForm(info) {
   const root = $("fields");
