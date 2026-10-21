@@ -123,7 +123,7 @@
       any = true;
       const th = el("div", { class: "thumbs" });
       for (const p of photos.slice(0, 8)) {
-        const b = el("button", { type: "button", title: (p.sources || []).join(" · ") }, el("img", { src: RT.imgSrc(p.url), alt: "", loading: "lazy" }));
+        const b = el("button", { type: "button", title: (p.sources || []).join(" · ") }, el("img", { src: RT.imgSrc(p.url), alt: "" }));
         b.addEventListener("click", () => RT.showPhoto(p));
         th.append(b);
       }
@@ -315,7 +315,7 @@
     for (const f of list.slice(0, filterState.limit)) {
       const sub = el("div", { class: "fsub" }, el("span", { class: "pill", text: f.category || "other" }));
       if (f.via) sub.append(el("span", { class: "tag via", text: "via " + clip(f.via, 40) }));
-      const info = el("td", { class: "info" });
+      const info = el("td", { class: "finfo" });
       const entries = Object.entries(f.details || {}).sort((a, b) => ["note", "md5", "http_status", "avatar", "username", "rank", "engine", "query", "host", "handle"].includes(a[0]) - ["note", "md5", "http_status", "avatar", "username", "rank", "engine", "query", "host", "handle"].includes(b[0]));
       for (const [k, v] of entries.slice(0, 3)) info.append(el("div", { text: k + ": " + clip(v, 160) }));
       const href = RT.safeHref(f.url);
@@ -432,7 +432,7 @@
     const isCand = (p) => (p.sources || []).length > 0 && (p.sources || []).every((x) => /^images:/.test(x));
     const tileFor = (p) => {
       const ph = el("div", { class: "ph", text: "loading…" });
-      const img = el("img", { src: RT.imgSrc(p.url), alt: "picture", loading: "lazy" });
+      const img = el("img", { src: RT.imgSrc(p.url), alt: "picture" });
       img.addEventListener("load", () => { ph.replaceChildren(img); });
       img.addEventListener("error", () => { ph.textContent = "unavailable"; });
       const cap = el("div", { class: "cap" }, el("div", { class: "src", text: clip((p.sources && p.sources[0]) || "picture", 70).replace(/^[a-z]+: /, "") }));
@@ -508,6 +508,7 @@
   }
 
   const cmpPick = new Set();
+  let cmpChanged = () => {};
   const KEY_ROWS = ["headlines", "employers", "locations", "education", "emails", "phones", "usernames", "websites", "interests"];
 
   function showConflict(label, facts) {
@@ -531,7 +532,7 @@
     const extra = el("div", { class: "d-thumbs" });
     for (const u of (id.photos || []).slice(1, 9)) {
       const t = el("button", { type: "button", class: "d-thumb" });
-      const im = el("img", { src: RT.imgSrc(u), alt: "", loading: "lazy" });
+      const im = el("img", { src: RT.imgSrc(u), alt: "" });
       im.addEventListener("error", () => t.remove());
       t.append(im);
       t.addEventListener("click", () => RT.showPhoto({ url: u, sources: id.records.map((r) => r.platform), group: 0 }));
@@ -613,7 +614,7 @@
     b.addEventListener("click", () => RT.refine(id));
     const cb = el("input", { type: "checkbox" });
     cb.checked = cmpPick.has(id.id);
-    cb.addEventListener("change", () => { cb.checked ? cmpPick.add(id.id) : cmpPick.delete(id.id); });
+    cb.addEventListener("change", () => { cb.checked ? cmpPick.add(id.id) : cmpPick.delete(id.id); cmpChanged(); });
     act.append(b, el("label", { class: "check small" }, cb, document.createTextNode("pick for comparison")));
     card.append(act);
     card.append(el("details", { style: "margin-top:10px", open: !!RT.notes.get("identity") }, el("summary", { text: "Your notes on this person" }), RT.notes.box("identity", "What you verified, doubts, next steps…")));
@@ -624,7 +625,7 @@
   function candidate(id, best, topId) {
     const c = el("div", { class: "ccard" + (best ? " best" : "") });
     const ph = el("div", { class: "cph", text: "👤" });
-    if ((id.photos || [])[0]) { const im = el("img", { src: RT.imgSrc(id.photos[0]), alt: "", loading: "lazy" }); im.addEventListener("load", () => ph.replaceChildren(im)); }
+    if ((id.photos || [])[0]) { const im = el("img", { src: RT.imgSrc(id.photos[0]), alt: "" }); im.addEventListener("load", () => ph.replaceChildren(im)); }
     c.append(el("div", { class: "ctop" }, ph, el("div", {}, el("div", { class: "cn", text: id.label }), scoreChip(id))));
     const have = new Set();
     if (topId) for (const k of ["employers", "locations", "education"]) for (const f of topId[k] || []) have.add(f.value.toLowerCase());
@@ -643,7 +644,7 @@
     open.addEventListener("click", () => { c.replaceWith(dossier(id)); });
     const cb = el("input", { type: "checkbox" });
     cb.checked = cmpPick.has(id.id);
-    cb.addEventListener("change", () => { cb.checked ? cmpPick.add(id.id) : cmpPick.delete(id.id); });
+    cb.addEventListener("change", () => { cb.checked ? cmpPick.add(id.id) : cmpPick.delete(id.id); cmpChanged(); });
     row.append(use, open, el("label", { class: "check small" }, cb, document.createTextNode("compare")));
     c.append(row);
     return c;
@@ -666,6 +667,48 @@
     const ul = el("ul", { class: "reasons" });
     tips.slice(0, 5).forEach((x) => ul.append(el("li", { text: x })));
     return el("details", { class: "panel", open: ambiguous }, el("summary", { text: "To learn more or tighten the match" }), ul);
+  }
+
+  // Accounts found under the handle, grouped by what they are for (coding, music,
+  // gaming, finance, creative…), so a person's interests and circles are visible
+  // at a glance. These are accounts that exist under the handle, not proof that
+  // every one belongs to the subject.
+  function areasPanel(S) {
+    const groups = new Map();
+    const seen = new Set();
+    for (const f of S.findings) {
+      if (!f.url || (f.status !== "found" && f.status !== "uncertain")) continue;
+      let area = "";
+      if (f.module === "social") area = f.category || "other";
+      else if (f.details && f.details.area) area = f.details.area;
+      else continue;
+      if (seen.has(f.url)) continue;
+      seen.add(f.url);
+      if (!groups.has(area)) groups.set(area, []);
+      groups.get(area).push(f);
+    }
+    if (groups.size === 0) return null;
+    const total = [...groups.values()].reduce((n, g) => n + g.length, 0);
+    const wrap = el("details", { class: "panel", open: true },
+      el("summary", { text: `Accounts by area (${total} across ${groups.size} areas)` }),
+      el("p", { class: "hint-line", text: "Accounts that exist under the handle(s) you gave, grouped by purpose. They show where the person is active, but a handle can belong to someone else: confirm with the photo, name or bio on each." }));
+    const grid = el("div", { class: "area-grid" });
+    [...groups.entries()].sort((a, b) => b[1].length - a[1].length).forEach(([area, fs]) => {
+      const box = el("div", { class: "area" }, el("h4", { text: `${area} · ${fs.length}` }));
+      const add = (f) => {
+        const href = RT.safeHref(f.url);
+        box.append(href ? el("a", { href, target: "_blank", rel: "noopener noreferrer", text: f.source.replace(/ profile$/, ""), title: f.url }) : el("span", { text: f.source }));
+      };
+      fs.slice(0, 8).forEach(add);
+      if (fs.length > 8) {
+        const more = el("button", { type: "button", class: "ghost small", text: `+${fs.length - 8} more` });
+        more.addEventListener("click", () => { more.remove(); fs.slice(8).forEach(add); });
+        box.append(more);
+      }
+      grid.append(box);
+    });
+    wrap.append(grid);
+    return wrap;
   }
 
   function skeleton() {
@@ -704,20 +747,38 @@
     const rest = top.primary ? ids.slice(1) : ids;
     if (rest.length) {
       const wrap = el("div", { class: "panel" }, el("h3", { text: top.primary ? `Other people matching (${rest.length})` : `Candidates (${rest.length})` }));
-      const cmpBtn = el("button", { type: "button", class: "ghost small", text: "Compare the ticked people" });
-      cmpBtn.addEventListener("click", () => {
-        const picked = ids.filter((i) => cmpPick.has(i.id));
-        if (picked.length < 2) { alert("Tick two people first (the checkbox on each card)."); return; }
-        RT.compareIdentities(picked[0], picked[1]);
-      });
-      wrap.append(el("div", { style: "margin:6px 0 10px" }, cmpBtn));
+      wrap.append(el("p", { class: "hint-line", text: "Tick the box on two people (or one person plus the best match) and a Compare bar appears at the bottom of the screen." }));
       const list = el("div", { class: "cand-grid" });
       rest.forEach((id, i) => list.append(candidate(id, !top.primary && i === 0, top.primary ? top : null)));
       wrap.append(list);
       root.append(wrap);
     }
+    // floating compare bar: appears as soon as something is ticked
+    const bar = el("div", { class: "cmp-bar", hidden: true });
+    const msg = el("span", {});
+    const go = el("button", { type: "button", class: "primary", text: "Compare" });
+    const clr = el("button", { type: "button", class: "ghost small", text: "Clear" });
+    bar.append(msg, go, clr);
+    const picked = () => ids.filter((i) => cmpPick.has(i.id));
+    cmpChanged = () => {
+      const p = picked();
+      bar.hidden = p.length === 0;
+      go.disabled = p.length < 1 || p.length > 2;
+      msg.textContent = p.length === 0 ? "" : p.length === 1 ? (top.primary && p[0].id !== top.id ? `Compare "${p[0].label}" with the best match "${top.label}", or tick one more person` : "Tick one more person to compare") : p.length === 2 ? `Compare "${p[0].label}" with "${p[1].label}"` : "Tick at most two people";
+    };
+    go.addEventListener("click", () => {
+      const p = picked();
+      if (p.length === 2) RT.compareIdentities(p[0], p[1]);
+      else if (p.length === 1 && top.primary && p[0].id !== top.id) RT.compareIdentities(top, p[0]);
+    });
+    clr.addEventListener("click", () => { cmpPick.clear(); root.querySelectorAll(".pickrow input, .check.small input[type=checkbox]").forEach((c) => { c.checked = false; }); cmpChanged(); });
+    root.append(bar);
+    cmpChanged();
+
     const tp = tipsPanel(top, S);
     if (tp) root.append(tp);
+    const ap = areasPanel(S);
+    if (ap) root.append(ap);
     if (weak.length) {
       const det = el("details", { class: "panel" }, el("summary", { text: `Accounts that only share the handle (${weak.length}) — probably other people` }),
         el("p", { class: "hint-line", text: "These accounts have no name and nothing else tying them to your subject. They are shown for completeness and are never followed." }));

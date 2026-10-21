@@ -195,7 +195,7 @@ th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--lin
 th { color: var(--faint); font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: .1em; background: var(--panel2); position: sticky; top: 0; }
 tbody tr { cursor: pointer; } tbody tr:hover td { background: var(--panel2); }
 td.src { max-width: 320px; overflow-wrap: anywhere; } .ftitle { font-weight: 600; } .fsub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 3px; }
-td.info { font-size: 12px; color: var(--muted); max-width: 440px; overflow-wrap: anywhere; } td.info div + div { margin-top: 2px; }
+td.finfo { font-size: 12px; color: var(--muted); max-width: 440px; overflow-wrap: anywhere; } td.finfo div + div { margin-top: 2px; }
 .pill { font: 11px var(--mono); padding: 1px 8px; border-radius: 99px; background: var(--panel2); border: 1px solid var(--line); }
 .furl { color: var(--faint); font-size: 11.5px; overflow-wrap: anywhere; }
 td.conf { font: 12px var(--mono); } td.conf.hi { color: var(--accent); } td.conf.mid { color: var(--amber); } td.conf.lo { color: var(--faint); }
@@ -402,3 +402,11 @@ details.fgroup .field:first-of-type { margin-top: 8px; }
 .legend button.k { border: 1px solid var(--line2); background: transparent; border-radius: 99px; padding: 1px 9px; font-size: 12px; color: var(--muted); }
 .legend button.k.off { opacity: .35; text-decoration: line-through; }
 .graph-bar select { width: auto; padding: 4px 8px; }
+
+.cmp-bar { position: sticky; bottom: 12px; z-index: 30; margin-top: 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.cmp-bar button.primary { flex: none; padding: 8px 22px; }
+.area-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.area { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel2); }
+.area h4 { margin: 0 0 6px; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
+.area a { display: block; overflow-wrap: anywhere; font-size: 13px; padding: 1px 0; }

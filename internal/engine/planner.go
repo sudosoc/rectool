@@ -100,7 +100,7 @@ func Enrich(t *models.Target, deriveFromName bool, maxAliases int) error {
 		if plus := strings.IndexByte(local, '+'); plus > 0 {
 			local = local[:plus] // drop +tag
 		}
-		aliases = append(aliases, local)
+		aliases = append(aliases, localVariants(local)...)
 	}
 	if deriveFromName {
 		aliases = append(aliases, namePermutations(t.FullName)...)
@@ -257,4 +257,20 @@ func nameFromSlug(slug string) string {
 		return ""
 	}
 	return strings.Join(parts, " ")
+}
+
+// localVariants returns the e-mail local part and the handles people commonly
+// build from the same stem: "vindiesel2791978" is usually "vindiesel" elsewhere,
+// and "john.doe" is "johndoe" or "john_doe".
+func localVariants(local string) []string {
+	out := []string{local}
+	stem := strings.TrimRight(local, "0123456789")
+	if len(local)-len(stem) >= 2 && len(stem) >= 4 {
+		out = append(out, stem)
+	}
+	if strings.ContainsAny(local, "._-") {
+		flat := strings.NewReplacer(".", "", "_", "", "-", "").Replace(local)
+		out = append(out, flat, strings.ReplaceAll(local, ".", "_"), strings.ReplaceAll(strings.ReplaceAll(local, "_", "."), "-", "."))
+	}
+	return out
 }

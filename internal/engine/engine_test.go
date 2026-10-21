@@ -121,7 +121,7 @@ func TestEnrichNormalisesAndValidates(t *testing.T) {
 	if tg.Domain != "www.example.com" || tg.IP != "2001:db8::1" || tg.Company != "Acme Inc" || tg.Email != "jane.doe+tag@corp.example.org" {
 		t.Fatalf("%+v", tg)
 	}
-	if len(tg.Aliases) != 1 || tg.Aliases[0] != "jane.doe" {
+	if len(tg.Aliases) < 1 || tg.Aliases[0] != "jane.doe" {
 		t.Errorf("aliases %v", tg.Aliases)
 	}
 	for _, bad := range []models.Target{{Domain: "not a domain"}, {IP: "999.1.1.1"}, {Email: "nope"}} {
@@ -377,5 +377,20 @@ func TestCloneAndTimeline(t *testing.T) {
 	e.timelineStage(rep)
 	if len(rep.Timeline) != 1 || rep.Timeline[0].Date != "2015-03-02" {
 		t.Fatalf("timeline: %+v", rep.Timeline)
+	}
+}
+
+func TestLocalVariants(t *testing.T) {
+	got := localVariants("vindiesel2791978")
+	if len(got) != 2 || got[1] != "vindiesel" {
+		t.Fatalf("got %v", got)
+	}
+	got = localVariants("john.doe")
+	found := map[string]bool{}
+	for _, g := range got {
+		found[g] = true
+	}
+	if !found["johndoe"] || !found["john_doe"] {
+		t.Fatalf("got %v", got)
 	}
 }
